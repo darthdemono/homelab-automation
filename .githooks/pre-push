@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Install once: git config core.hooksPath .githooks
+# Stops a push that would publish local files, the machine's paths, secret-shaped values or a history/* branch.
+exec python3 "$(git rev-parse --show-toplevel)/tools/leak_audit.py" --stdin-pre-push
