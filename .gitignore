@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ruff_cache/
+
+# Runtime state and private plugins
+state/
+custom/*
+!custom/.gitkeep
+config/*.yaml
+!config/*.example.yaml
+
+# Local working files
+.agents/
+.claude/
+.codex/
+.gemini/
+.serena/
+Handoff/
+handoff/
+Research/
+research/
+CLAUDE*.md
+AGENTS*.md
+CODEX*.md
+GEMINI*.md
+
+# The generic guide for any contributor or agent is public; the per-tool and private ones above stay local
+!AGENTS.md
