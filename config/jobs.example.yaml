@@ -1,0 +1,8 @@
+# A pipeline is an ordered list of plugin.job steps. `homelab run <name>` plans each step;
+# `apply: true` applies them straight away. `schedule` is a systemd OnCalendar expression;
+# `homelab schedule --write ~/.config/systemd/user` renders the units and enables nothing.
+pipelines: {}
+  # new-media:
+  #   steps: [jellyfix.plan]
+  #   schedule: "*-*-* 04:00:00"
+  #   apply: false

@@ -1,0 +1,9 @@
+# A block switches a plugin on. `enabled: false` switches it off again. Options are validated
+# by the plugin's own model; `homelab plugins` lists what is installed.
+plugins: {}
+  # jellyfix:
+  #   options:
+  #     config_file: jellyfix.toml
+  # my_private_plugin:
+  #   enabled: true
+  #   options: {}

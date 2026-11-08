@@ -1,0 +1,5 @@
+# Copy the three *.example.yaml files to homelab.yaml, plugins.yaml and jobs.yaml (gitignored).
+state_dir: state            # ledger, quarantine and plugin caches
+custom_dir: custom          # private plugins, one folder each
+paths: {}                    # names a plugin can use in its manifest as {name}, e.g. media: /mnt/media
+schedule_wrapper: []        # prefix for scheduled commands, e.g. ["unv", "exec", "--project", "homelab", "--"]

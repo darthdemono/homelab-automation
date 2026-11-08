@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "Pipeline": {
+      "additionalProperties": false,
+      "properties": {
+        "steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schedule"
+        },
+        "apply": {
+          "default": false,
+          "title": "Apply",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "title": "Pipeline",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "pipelines": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Pipeline"
+      },
+      "default": {},
+      "title": "Pipelines",
+      "type": "object"
+    }
+  },
+  "title": "Jobs",
+  "type": "object"
+}

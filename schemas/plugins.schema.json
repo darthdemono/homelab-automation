@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "PluginBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "options": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Options",
+          "type": "object"
+        }
+      },
+      "title": "PluginBlock",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "plugins": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PluginBlock"
+      },
+      "default": {},
+      "title": "Plugins",
+      "type": "object"
+    }
+  },
+  "title": "Plugins",
+  "type": "object"
+}

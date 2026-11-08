@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "state_dir": {
+      "default": "state",
+      "title": "State Dir",
+      "type": "string"
+    },
+    "custom_dir": {
+      "default": "custom",
+      "title": "Custom Dir",
+      "type": "string"
+    },
+    "paths": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "title": "Paths",
+      "type": "object"
+    },
+    "schedule_wrapper": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Schedule Wrapper",
+      "type": "array"
+    }
+  },
+  "title": "Core",
+  "type": "object"
+}
