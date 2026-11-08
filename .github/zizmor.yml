@@ -5,3 +5,8 @@ rules:
       # Steps that check out this repository by default are intended.
       - ci.yml
       - release.yml
+  superfluous-actions:
+    ignore:
+      # ncipollo/release-action also uploads the signed assets and generates the release notes in one
+      # step, which `gh release` would need a script for; the action is pinned by SHA.
+      - release.yml
