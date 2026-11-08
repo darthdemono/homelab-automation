@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from . import __version__, scaffold, secrets
+from . import __version__, report, scaffold, secrets
 from .config import Core, Jobs, Plugins, config_dir, load
 from .conformance import check
 from .errors import Invalid, NotFound, RunError
@@ -67,6 +67,17 @@ COMMANDS: dict[str, tuple[str, list]] = {
     "policy": ("show the autonomy levels: the default, the rules and the level of every plugin and script", []),
     "pause": ("switch every apply off (plans and undo still work)", []),
     "resume": ("switch applies back on", []),
+    "report": (
+        "snapshot the stack and list what changed since the last snapshot (typed kinds)",
+        [
+            (("--no-save",), {"action": "store_true", "help": "compare, but do not write a snapshot"}),
+            (("--keep",), {"type": int, "default": 30, "help": "keep the latest N snapshots, 0 to keep all"}),
+        ],
+    ),
+    "attention": (
+        "what needs attention now: failed or stale runs, a broken audit chain, and the latest changes, ranked",
+        [(("--limit",), {"type": int, "default": 10, "help": "show at most N items, 0 for all"})],
+    ),
     "audit": (
         "show the latest audit events, or check the hash chain",
         [
@@ -372,6 +383,98 @@ class App:
     def cmd_resume(self) -> Result:
         self.runner.set_paused(False)
         return Result("resume", {"paused": False}, ["resumed"])
+
+    def cmd_report(self) -> Result:
+        snaps = report.saved(self.config)
+        previous = json.loads(snaps[-1].read_text()) if snaps else None
+        now = report.take(self.config)
+        changes = report.diff(previous, now) if previous else []
+        if not self.args.no_save:
+            report.save(self.config, now, self.args.keep)
+        counts: dict[str, int] = {}
+        for ch in changes:
+            counts[ch["kind"]] = counts.get(ch["kind"], 0) + 1
+        problems = report.trouble(now)
+        data = {
+            "compared_with": previous["ts"] if previous else None,
+            "saved": not self.args.no_save,
+            "changes": changes,
+            "counts": counts,
+            "not_running": problems,
+        }
+        if previous is None:
+            text = [
+                "first snapshot: a baseline was saved" if not self.args.no_save else "no snapshot to compare with yet"
+            ]
+        else:
+            text = [
+                f"compared with {previous['ts']}: "
+                + (", ".join(f"{n} {k}" for k, n in sorted(counts.items())) if changes else "no changes")
+            ]
+            text += [f"  {ch['kind']:<9} {ch['subject']:<24} {ch['detail']}" for ch in changes]
+        text += [f"  not running: {p}" for p in problems]
+        return Result("report", data, text)
+
+    def cmd_attention(self) -> Result:
+        items = []
+        for rec in self.runner.runs():
+            if rec["status"] == "failed":
+                items.append(
+                    {
+                        "severity": "high",
+                        "what": f"run {rec['id']} {rec['ref']} failed",
+                        "next": f"homelab undo {rec['id']} --yes",
+                    }
+                )
+        verify = self.runner.verify_audit()
+        if not verify["ok"]:
+            items.append(
+                {
+                    "severity": "high",
+                    "what": f"audit chain broken at line {verify['broken_at']}: {verify['why']}",
+                    "next": "homelab audit --verify",
+                }
+            )
+        snaps = report.saved(self.config)
+        if len(snaps) >= 2:
+            for ch in report.diff(json.loads(snaps[-2].read_text()), json.loads(snaps[-1].read_text())):
+                high = ch["kind"] in ("gone", "restarts") or (
+                    ch["kind"] == "state" and not ch["detail"].endswith("running")
+                )
+                items.append(
+                    {
+                        "severity": "high"
+                        if high
+                        else "medium"
+                        if ch["kind"] in ("replaced", "disk", "state")
+                        else "low",
+                        "what": f"{ch['kind']} {ch['subject']}: {ch['detail']}",
+                        "next": "homelab report",
+                    }
+                )
+        if snaps:
+            items += [
+                {"severity": "high", "what": p, "next": "homelab scripts docker"}
+                for p in report.trouble(json.loads(snaps[-1].read_text()))
+            ]
+        if self.runner.paused:
+            items.append({"severity": "medium", "what": "applies are paused", "next": "homelab resume"})
+        for rec in self.runner.runs():
+            if rec["status"] == "planned":
+                items.append(
+                    {
+                        "severity": "low",
+                        "what": f"planned run {rec['id']} {rec['ref']} was never applied",
+                        "next": f"homelab show {rec['id']}",
+                    }
+                )
+        order = {"high": 0, "medium": 1, "low": 2}
+        items.sort(key=lambda i: order[i["severity"]])
+        shown = items[: self.args.limit] if self.args.limit else items
+        text = [f"{i['severity']:<6} {i['what']}  -> {i['next']}" for i in shown] or ["nothing needs attention"]
+        if len(items) > len(shown):
+            text.append(f"... {len(items) - len(shown)} more")
+        return Result("attention", {"items": shown, "left_out": len(items) - len(shown)}, text)
 
     def cmd_audit(self) -> Result:
         if self.args.verify:

@@ -1,5 +1,57 @@
 {
   "$defs": {
+    "Policy": {
+      "additionalProperties": false,
+      "description": "How much a job may do. deny: not even a plan. plan: plan only. ask: apply needs a person (--yes). auto: a\nscheduled pipeline may apply it unattended. The first matching rule wins; `default` covers the rest.",
+      "properties": {
+        "default": {
+          "enum": [
+            "deny",
+            "plan",
+            "ask",
+            "auto"
+          ],
+          "type": "string",
+          "default": "ask",
+          "title": "Default"
+        },
+        "rules": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PolicyRule"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "title": "Policy",
+      "type": "object"
+    },
+    "PolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "match": {
+          "title": "Match",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "deny",
+            "plan",
+            "ask",
+            "auto"
+          ],
+          "title": "Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "match",
+        "level"
+      ],
+      "title": "PolicyRule",
+      "type": "object"
+    },
     "Secrets": {
       "additionalProperties": false,
       "description": "Where plugin secrets come from. `auto` tries the process environment, then UnENVerse\n(recommended), then a .env file (fallback). Values are never printed or stored.",
@@ -86,6 +138,24 @@
       },
       "title": "Schedule Wrapper",
       "type": "array"
+    },
+    "policy": {
+      "$ref": "#/$defs/Policy",
+      "default": {
+        "default": "ask",
+        "rules": []
+      }
+    },
+    "inventory": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "default": {},
+      "title": "Inventory",
+      "type": "object"
     }
   },
   "title": "Core",

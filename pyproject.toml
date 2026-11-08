@@ -47,6 +47,7 @@ select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 # scripts run external programs (docker, ffprobe) by design; the engine checks each exec against the manifest
 "scripts/*" = ["S603", "S607"]
 "src/homelab/runner.py" = ["S603"]
+"src/homelab/report.py" = ["S603", "S607"]
 "src/homelab/cli.py" = ["E501"]
 # secrets.py runs `unv` by name on purpose: UnENVerse is the recommended secret source
 "src/homelab/secrets.py" = ["S603", "S606", "S607"]
