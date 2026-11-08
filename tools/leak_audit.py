@@ -40,7 +40,7 @@ LOCAL_PATHS = [
     (r"\.bak(\.json)?$", "backup file"),
 ]
 
-SECRET_SHAPES = [
+VALUE_SHAPES = [
     (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key"),
     (r"\bghp_[A-Za-z0-9]{30,}", "GitHub token"),
     (r"\bAKIA[0-9A-Z]{16}\b", "AWS access key"),
@@ -83,7 +83,7 @@ def audit(repo: Path, rev: str, tree_only: bool = False) -> list[str]:
     """Return one finding per problem: 'kind: where'. Never includes a matched value."""
     findings: list[str] = []
     local = [(re.compile(p), why) for p, why in LOCAL_PATHS]
-    secrets = [(re.compile(p), why) for p, why in SECRET_SHAPES]
+    shapes = [(re.compile(p), why) for p, why in VALUE_SHAPES]
     machine = machine_patterns()
     mine = personal_patterns(repo)
 
@@ -98,9 +98,9 @@ def audit(repo: Path, rev: str, tree_only: bool = False) -> list[str]:
 
     def scan(path: str, line_no: int, text: str, commit: str = "") -> None:
         where = f"{path}:{line_no}" + (f" in {commit[:8]}" if commit else "")
-        for pattern, why in secrets:
+        for pattern, why in shapes:
             if pattern.search(text):
-                findings.append(f"secret ({why}): {where}")
+                findings.append(f"value shape ({why}): {where}")
         for pattern, why in machine:
             if pattern.search(text):
                 findings.append(f"machine ({why}): {where}")
