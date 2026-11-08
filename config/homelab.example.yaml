@@ -3,3 +3,8 @@ state_dir: state            # ledger, quarantine and plugin caches
 custom_dir: custom          # private plugins, one folder each
 paths: {}                    # names a plugin can use in its manifest as {name}, e.g. media: /mnt/media
 schedule_wrapper: []        # prefix for scheduled commands, e.g. ["unv", "exec", "--project", "homelab", "--"]
+secrets:                    # plugins read secrets from environment variables, never from these files
+  provider: auto            # auto | unv (recommended) | dotenv (fallback) | env
+  # project: homelab        # unv exec --project homelab
+  # entries: {JELLYFIN_API_KEY: jellyfin}   # ENV_VAR -> unv entry, when the names differ
+  dotenv: .env              # must be chmod 600

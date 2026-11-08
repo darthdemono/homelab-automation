@@ -16,6 +16,9 @@ custom/*
 !custom/.gitkeep
 config/*.yaml
 !config/*.example.yaml
+.env
+.env.*
+!.env.example
 
 # Local working files
 .agents/

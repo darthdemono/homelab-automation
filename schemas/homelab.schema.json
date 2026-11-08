@@ -1,6 +1,61 @@
 {
+  "$defs": {
+    "Secrets": {
+      "additionalProperties": false,
+      "description": "Where plugin secrets come from. `auto` tries the process environment, then UnENVerse\n(recommended), then a .env file (fallback). Values are never printed or stored.",
+      "properties": {
+        "provider": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "unv",
+            "dotenv",
+            "env"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project"
+        },
+        "entries": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Entries",
+          "type": "object"
+        },
+        "dotenv": {
+          "default": ".env",
+          "title": "Dotenv",
+          "type": "string"
+        }
+      },
+      "title": "Secrets",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
   "properties": {
+    "secrets": {
+      "$ref": "#/$defs/Secrets",
+      "default": {
+        "provider": "auto",
+        "project": null,
+        "entries": {},
+        "dotenv": ".env"
+      }
+    },
     "state_dir": {
       "default": "state",
       "title": "State Dir",
