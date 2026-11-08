@@ -1,0 +1,20 @@
+{
+  "name": "homelab-automation",
+  "version": "0.1.0",
+  "description": "Operate a homelab through the homelab CLI: plan first, apply exactly what was reviewed, undo anything.",
+  "author": { "name": "Jubair Hasan (DarthDemono)", "url": "https://github.com/darthdemono" },
+  "homepage": "https://github.com/darthdemono/homelab-automation",
+  "repository": "https://github.com/darthdemono/homelab-automation",
+  "keywords": ["homelab", "automation", "docker", "agents"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Homelab Automation",
+    "shortDescription": "Plan, apply and undo homelab changes",
+    "longDescription": "A plan-first engine for homelab work: find a script, review its plan, apply exactly that plan, and undo it if it was wrong.",
+    "developerName": "Jubair Hasan (DarthDemono)",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/darthdemono/homelab-automation",
+    "defaultPrompt": ["What needs attention in my homelab?", "Restart my media stack and tell me if anything is unhealthy."]
+  }
+}
