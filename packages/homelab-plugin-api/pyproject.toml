@@ -1,0 +1,14 @@
+[project]
+name = "homelab-plugin-api"
+version = "1.0.0"
+description = "The public contract a homelab-automation plugin implements."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Jubair Hasan (DarthDemono)" }]
+requires-python = ">=3.13"
+dependencies = ["pydantic>=2.13"]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
