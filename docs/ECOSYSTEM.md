@@ -25,6 +25,7 @@ Status words: **available** means it ships in this repository and is tested; **p
 | `docker_ps` | list containers with state, status and image (read only) |
 | `compose_restart` | restart some or all services of a Compose file |
 | `compose_update` | `docker compose pull`, then `up -d`, for a Compose file |
+| `import_repo_history` | fetch an old repository's complete history into local-only `history/full/NAME/*` branches and copy its notes and handoffs next to the project, for tools being merged in |
 
 ## Docker ecosystem
 
@@ -38,7 +39,8 @@ Application-aware plugins are **planned**, not shipped. The first ones follow th
 | TV and movies | Sonarr, Radarr, Prowlarr, Bazarr | `media-stack` | match fixes, indexer and download-client setup, import checks |
 | Downloads | qBittorrent behind a VPN container such as Gluetun | `media-stack`, `gluetun` | category and path routing, cross-seed, forwarded-port updates |
 | Music | Navidrome and a tagged library | `musicfix` | NTFS-safe cleanup, duplicate removal by real audio quality, tags, analysis in a container, playlists |
-| Photos and files | Immich, Nextcloud | write one | scripts through their APIs, with secrets from UnENVerse |
+| Files, calendars, contacts | Nextcloud | `nextcloud` (**available**) | DAV `put` and `delete` of calendar events, contact cards and files: a copy is saved before anything is replaced or removed, and `undo` restores it. See `plugins/nextcloud/README.md` |
+| Photos | Immich | write one | scripts through its API, with secrets from UnENVerse |
 | Monitoring | Prometheus textfile collectors, SMART | `monitoring` | collectors that write facts for an agent to query |
 
 Anything not listed is **write one**: describe the job to your agent, and it scaffolds a script with `homelab script-new`, so the new one-off is safe, reversible where the actions allow it, and findable next time.

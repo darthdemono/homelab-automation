@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **First bundled plugin: `nextcloud`** (`plugins/nextcloud`, package `homelab-plugin-nextcloud`, entry point `homelab.plugins`). `put` and `delete` over DAV (CalDAV and CardDAV included) save a copy of what is there before replacing or removing it, and `undo` restores it; an undone creation is saved to `removed/` first, because contacts have no trash. The app password comes from `NEXTCLOUD_APP_PASSWORD`.
+- `ctx.path("state")`: each plugin gets its own folder under `state/plugins/<name>/` for journals and saved copies.
+- Script `import_repo_history`: brings an old repository's full history (local-only `history/full/NAME/*` branches) and notes into the project, with an index.
+
 - **Docker scripts.** `docker_ps` (read only), `compose_restart` and `compose_update` work with any Docker Compose v2 stack through the `docker` CLI.
 - **Leak audit.** `tools/leak_audit.py` and a `pre-push` hook check every unpushed commit for private paths, the machine's home folder and host name, secret-shaped values and the owner's own patterns, and refuse `history/*` branches. Maintenance tools moved from `scripts/` to `tools/`, so `scripts/` holds only engine scripts.
 - **Docs.** `docs/PUBLISHING.md` (build, publish, release, history import, leak recovery), `docs/ECOSYSTEM.md` (what it can do and what it supports, with the status of each item), and a build-and-publish tutorial in `AGENTS.md`.
