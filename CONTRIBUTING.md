@@ -25,7 +25,7 @@ uv sync
 uv run homelab --help
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
-uv run python scripts/gen_schemas.py --check
+uv run python tools/gen_schemas.py --check
 git config core.hooksPath .githooks
 ```
 
@@ -35,7 +35,7 @@ CI runs the same checks on Python 3.13 and 3.14, with a coverage floor of 85 per
 
 - Branch from `main`; `main` is protected and takes pull requests only, gated by the `CI result` check.
 - A bug fix comes with a regression test that fails without the fix.
-- A changed config option or model means regenerating `schemas/` (`uv run python scripts/gen_schemas.py`).
+- A changed config option or model means regenerating `schemas/` (`uv run python tools/gen_schemas.py`).
 - A change a user can see gets a line in [CHANGELOG.md](CHANGELOG.md).
 - Use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the invariants: plan first, apply what was reviewed, undo anything, never delete.
 
