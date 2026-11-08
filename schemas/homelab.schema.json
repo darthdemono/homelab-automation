@@ -66,6 +66,11 @@
       "title": "Custom Dir",
       "type": "string"
     },
+    "scripts_dir": {
+      "default": "scripts",
+      "title": "Scripts Dir",
+      "type": "string"
+    },
     "paths": {
       "additionalProperties": {
         "type": "string"
