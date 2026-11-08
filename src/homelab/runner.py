@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import difflib
 import getpass
 import hashlib
@@ -307,9 +308,42 @@ class Runner:
                 raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
         return record, plugin, ctx, options, plan
 
+    def alive(self, record: dict) -> bool:
+        """A run marked running whose process is gone was interrupted: mark it failed so it can be undone."""
+        if record.get("status") != "running":
+            return True
+        try:
+            os.kill(record["pid"], 0)
+            return True
+        except (ProcessLookupError, KeyError, TypeError):
+            record["status"], record["error"] = "failed", "interrupted: the process ended before the run finished"
+            self._save(record)
+            return False
+        except PermissionError:
+            return True
+
+    def cancel(self, ref: str) -> dict:
+        import signal
+
+        record = self.get(ref)
+        if record["status"] != "running":
+            raise Conflict(f"run {record['id']} is {record['status']}, only a running run can be cancelled")
+        try:
+            os.killpg(record["pid"], signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            if record.get("pid"):
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(record["pid"], signal.SIGTERM)
+        record["status"], record["error"] = "failed", "cancelled: undo it to restore what was already done"
+        self._save(record)
+        self.audit("cancel", run=record["id"], ref=record["ref"])
+        return record
+
     def apply(self, ref: str) -> dict:
         record, plugin, ctx, options, plan = self.check_apply(ref)
         run_id = record["id"]
+        record.update(status="running", pid=os.getpid(), started=datetime.now(UTC).isoformat())
+        self._save(record)
         try:
             for number, action in enumerate(plan.actions):
                 record["undo"].append(self._do(record["id"], number, action, plugin, ctx, options))
