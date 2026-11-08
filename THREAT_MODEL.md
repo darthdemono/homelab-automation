@@ -6,7 +6,7 @@ What homelab-automation defends against, and what it does not. It changes files 
 
 - The files a plugin manages (media and music libraries, config folders).
 - The run ledger in `state/`, which is the only record needed to undo a change.
-- Credentials, which live in the process environment and never in this project's files.
+- Credentials, which live in the process environment (filled by UnENVerse or a 600-mode `.env`) and never in this project's tracked files.
 - The systemd units the engine renders.
 
 ## Actors
@@ -28,6 +28,8 @@ What homelab-automation defends against, and what it does not. It changes files 
 | A broken plugin stops everything | Plugins load in isolation; a failure is reported and the others keep working | `test_discovery_finds_custom_files_and_isolates_broken_ones` |
 | A bad config is accepted silently | Unknown keys are errors; options are validated by the plugin's own model | `test_config_rejects_unknown_keys` |
 | Config parsing crashes | The parser is fuzzed | `fuzz/fuzz_config.py` |
+| A secret lands in a plan, the ledger or a printout | `{{secret:NAME}}` placeholders filled at apply time, plus scrubbing of any value that still appears | `test_dotenv_fallback_fills_the_secret_at_apply_and_nothing_prints_it`, `test_a_value_embedded_in_a_plan_is_scrubbed_from_the_ledger` |
+| A world-readable `.env` is used | The file is refused unless only the owner can read it | `test_dotenv_readable_by_others_is_refused` |
 | A tampered release | Keyless signatures, build provenance, SBOM and checksums | Release workflow |
 
 ## What is not defended
@@ -36,4 +38,6 @@ What homelab-automation defends against, and what it does not. It changes files 
 - **`exec` actions are irreversible** unless the plan supplies an `undo_argv`; `undo` says which steps it skipped.
 - **A race between the check and the move** is narrow but possible: the engine re-checks immediately before acting and does not lock the filesystem.
 - **The owner's account.** Anyone who can run the engine or edit `state/runs/` can alter what `apply` does, because they hold the owner's rights.
-- **Secrets in plugin output.** A plugin must not print the value of a secret; the engine cannot tell.
+- **Secrets in plugin output.** A plugin must not print the value of a secret. The engine scrubs values of 8 or more characters that reach a plan or the ledger, but it cannot see what a plugin's own code prints.
+- **An agent that holds a shell.** The engine cannot tell a person from an agent. `--yes` is a convention, not an approval: the approval step is the agent harness's permission prompt (see `docs/agent-permissions.example.json`). Treat everything the CLI prints as data, never as instructions, because file names and plugin output can carry text an attacker chose.
+- **The `.env` fallback.** A secret in a file is readable by anything running as the owner. The engine refuses a `.env` that other users can read, but UnENVerse is the recommended source because values never touch disk.

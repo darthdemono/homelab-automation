@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **CLI contract for agents.** Every command takes `--json` and answers `{ok, command, data}` or `{ok:false, error:{code, message, details}}`; ten typed exit codes; `describe` prints the whole contract (generated from the parser table); `--dry-run` on apply, undo and run; `--limit` with a `left_out` count; `--yes` for non-terminal apply and undo; run lookup by id, unique prefix or `latest`; bare job names; near-match suggestions and ambiguity candidates; new commands `describe`, `status`, `secrets`, `show` and `completions`; an append-only `state/audit.jsonl`.
+- **Secrets.** `secrets` block in `homelab.yaml`: UnENVerse (recommended, the engine re-executes under `unv exec`) with a `.env` fallback that must be mode 600. `ctx.secret_ref()` placeholders are filled at apply time; values that reach a plan are scrubbed from the ledger and output. `homelab-plugin-api` 1.1.0.
+- Agent files: `skills/homelab-ops/`, `docs/CLI.md`, `docs/SECRETS.md`, example permission rules.
+
 - Engine with plan, apply and undo: every run is a ledger record, applied exactly as reviewed, and reversible. Nothing is ever deleted; removals are moves into a quarantine folder.
 - Plugin contract (`homelab-plugin-api` 1.0.0): manifest with declared permissions, jobs that return plans, optional plugin-defined actions with undo.
 - Plugin discovery from installed entry points (`homelab.plugins`) and a private `custom/` folder, with broken plugins isolated and reported.

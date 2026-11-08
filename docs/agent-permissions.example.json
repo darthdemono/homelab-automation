@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(homelab describe:*)",
+      "Bash(homelab status:*)",
+      "Bash(homelab plugins:*)",
+      "Bash(homelab doctor:*)",
+      "Bash(homelab secrets:*)",
+      "Bash(homelab plan:*)",
+      "Bash(homelab show:*)",
+      "Bash(homelab runs:*)",
+      "Bash(homelab apply:* --dry-run*)",
+      "Bash(homelab undo:* --dry-run*)"
+    ],
+    "ask": [
+      "Bash(homelab apply:*)",
+      "Bash(homelab undo:*)",
+      "Bash(homelab run:*)",
+      "Bash(homelab schedule:*)"
+    ]
+  }
+}

@@ -47,7 +47,7 @@ Only the latest release receives security fixes. See [SUPPORT_POLICY.md](SUPPORT
 
 ## Secrets and credentials used by the project
 
-- The engine never stores a secret. A plugin option names an environment variable (`*_env`), and the value comes from the process environment, which the owner fills from a secret manager.
+- The engine never stores or prints a secret. A plugin declares the environment variable names it needs, and the values come from [UnENVerse](https://github.com/darthdemono/UnENVerse) (`unv exec`, recommended) or from a `.env` file that only its owner can read (fallback). See [docs/SECRETS.md](docs/SECRETS.md). Plans hold `{{secret:NAME}}` placeholders that are filled in at apply time, and any value that still reaches a plan is replaced by `[redacted:NAME]` in the ledger and the output.
 - The project's own CI needs no long-lived credentials: releases are signed keylessly from the workflow identity, and PyPI publishing, when enabled, uses trusted publishing.
 - GitHub secret scanning with push protection is on, `.gitignore` excludes `state/`, local config and private plugins, and test data must not look like real credentials.
 
