@@ -89,6 +89,8 @@ jobs:
       - run: uv run ruff format --check .
       - name: Checked-in schemas match the code
         run: uv run python scripts/gen_schemas.py --check
+      - name: Sample environment matches the code
+        run: uv run python scripts/gen_env_example.py --check
       - name: Lockfile is current
         run: uv lock --check
 

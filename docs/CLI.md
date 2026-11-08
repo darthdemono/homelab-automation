@@ -39,7 +39,13 @@ Pass `--json` to any command, before or after the subcommand. stdout is then exa
 
 ## Commands
 
-`describe`, `status`, `plugins`, `doctor`, `secrets`, `plan`, `apply`, `undo`, `show`, `runs`, `run`, `schedule`, `plugin-new`, `schema`, `completions`. Run `homelab describe` for the arguments of each, and `homelab completions bash|zsh|fish` for shell completion.
+`describe`, `status`, `plugins`, `scripts`, `doctor`, `secrets`, `plan`, `apply`, `undo`, `show`, `runs`, `run`, `schedule`, `plugin-new`, `script-new`, `schema`, `completions`. Run `homelab describe` for the arguments of each, and `homelab completions bash|zsh|fish` for shell completion.
+
+## Scripts and the nudge
+
+A script is one decorated function (`@script`) that returns a plan, so a one-off fix gets plan, apply, undo, audit, secrets and `--dry-run` like any plugin. `homelab scripts [words] [--tag T] [--status S] [--limit N]` finds one (at most 5 hits by default; words match the name, summary, tags and the `when` hint), and `homelab plan <script>` runs it. Options are set with `--set KEY=VALUE` (a value is JSON when it parses as JSON, text otherwise) and are stored with the run, so `apply` uses the same ones.
+
+A script carries a **nudge**: four short strings (`when`, `before`, `after`, `avoid`). The engine never calls a model. It shows the hints when they help: `describe <script>` prints all four, `plan` adds `data.nudge` (`before`, `avoid`), `data.ask_owner` and `data.next` (the exact next command), `apply` adds the `after` hint, and the text output ends with a `next:` line. `homelab script-new <name>` scaffolds one (private by default, `--public` for the tracked `scripts/`), and `homelab doctor` rejects a script with no `when` hint or no tag. Status is `one-off`, `stable` or `retired`.
 
 ## Letting an agent use it
 

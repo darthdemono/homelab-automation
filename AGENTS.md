@@ -35,7 +35,7 @@ uv run homelab --help
 
 ## Agent workflow
 
-The CLI is the whole interface; there is no server to connect to. Run `homelab describe` once, then: `plan`, show the plan to the owner, ask, `apply --yes`, `show` to verify. Read exit codes (see [`docs/CLI.md`](docs/CLI.md)), use `--json`, and keep output small with `--limit`. A ready-made skill is in `skills/homelab-ops/`, and permission rules for Claude Code are in `docs/agent-permissions.example.json`. Secrets come from UnENVerse (`unv`, recommended) or a 600-mode `.env`: see [`docs/SECRETS.md`](docs/SECRETS.md). Never print or request a secret value.
+The CLI is the whole interface; there is no server to connect to. Run `homelab describe` once. For a task, `homelab scripts <words>` first (a one-off may already exist, with a nudge telling you when to use it and what to check). Then: `plan`, show the plan to the owner, ask, `apply --yes`, `show` to verify. Read exit codes (see [`docs/CLI.md`](docs/CLI.md)), use `--json`, and keep output small with `--limit`. A ready-made skill is in `skills/homelab-ops/`, and permission rules for Claude Code are in `docs/agent-permissions.example.json`. Secrets come from UnENVerse (`unv`, recommended) or a 600-mode `.env`: see [`docs/SECRETS.md`](docs/SECRETS.md). Never print or request a secret value.
 
 ## Rules
 
