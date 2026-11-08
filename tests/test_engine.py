@@ -90,16 +90,16 @@ def test_cli_plan_apply_undo_round_trip(env, capsys):
     tmp, cfg = env[0], env[1]
     assert main(["--config", str(cfg), "plan", "demo.tidy"]) == 0
     run_id = next(iter((tmp / "state" / "runs").glob("*.json"))).stem
-    assert main(["--config", str(cfg), "apply", run_id]) == 0
+    assert main(["--config", str(cfg), "apply", run_id, "--yes"]) == 0
     assert main(["--config", str(cfg), "runs"]) == 0
-    assert main(["--config", str(cfg), "undo", run_id]) == 0
+    assert main(["--config", str(cfg), "undo", run_id, "--yes"]) == 0
     assert (tmp / "lib" / "a.txt").exists()
     assert "undone" in capsys.readouterr().out
 
 
-def test_cli_reports_errors_with_exit_code_1(env, capsys):
+def test_cli_reports_a_missing_run_with_exit_code_3(env, capsys):
     cfg = env[1]
-    assert main(["--config", str(cfg), "apply", "missing"]) == 1
+    assert main(["--config", str(cfg), "apply", "missing", "--yes"]) == 3
     assert "no run" in capsys.readouterr().err
 
 
@@ -112,7 +112,7 @@ def test_cli_plugins_and_doctor(env, capsys):
 
 def test_cli_run_pipeline_with_apply(env):
     tmp, cfg = env[0], env[1]
-    assert main(["--config", str(cfg), "run", "nightly", "--apply"]) == 0
+    assert main(["--config", str(cfg), "run", "nightly", "--apply", "--yes"]) == 0
     assert (tmp / "lib" / "note.txt").exists()
 
 
