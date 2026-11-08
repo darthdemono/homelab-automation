@@ -1,6 +1,6 @@
 [project]
 name = "homelab-plugin-api"
-version = "1.1.0"
+version = "1.2.0"
 description = "The public contract a homelab-automation plugin implements."
 readme = "README.md"
 license = "Apache-2.0"
