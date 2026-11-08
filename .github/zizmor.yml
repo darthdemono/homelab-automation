@@ -1,0 +1,7 @@
+# zizmor (the workflow auditor in security.yml). Every ignore says why the finding is accepted.
+rules:
+  self-repository:
+    ignore:
+      # Steps that check out this repository by default are intended.
+      - ci.yml
+      - release.yml

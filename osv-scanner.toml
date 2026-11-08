@@ -1,0 +1,6 @@
+# Vulnerabilities in dependencies that do not affect homelab-automation are recorded here with a
+# reason, e.g.
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# reason = "the vulnerable function is never called"

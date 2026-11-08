@@ -1,0 +1,25 @@
+name: Fuzz
+
+# Atheris (coverage-guided) on the parsers that read files the owner wrote by hand.
+on:
+  schedule:
+    - cron: "29 3 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atheris:
+    name: Atheris config fuzzing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Fuzz for one minute
+        run: uv run --with atheris python fuzz/fuzz_config.py -max_total_time=60
