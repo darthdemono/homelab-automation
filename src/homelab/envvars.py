@@ -8,6 +8,10 @@ HOMELAB_ variable that is not listed here."""
 ENGINE_ENV = {
     "HOMELAB_CONFIG": ("engine", "folder with homelab.yaml, plugins.yaml and jobs.yaml (default: ./config)"),
     "HOMELAB_SECRETS_LOADED": ("internal", "set by the engine when it re-executes under unv; never set it yourself"),
+    "HOMELAB_SCHEDULED": (
+        "internal",
+        "set by the rendered systemd units: a scheduled pipeline applies only auto-level steps",
+    ),
 }
 
 # Variables UnENVerse reads (`unv describe` lists them). Only needed when unv has to authenticate

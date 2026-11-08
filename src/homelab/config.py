@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import os
 from pathlib import Path
 from typing import Literal
@@ -23,6 +24,25 @@ class Secrets(BaseModel):
     dotenv: str = ".env"  # fallback file; refused unless only the owner can read it
 
 
+Level = Literal["deny", "plan", "ask", "auto"]
+LEVELS = {"deny": 0, "plan": 1, "ask": 2, "auto": 3}
+
+
+class PolicyRule(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    match: str  # a glob on "plugin.job", or on a plugin or script name alone
+    level: Level
+
+
+class Policy(BaseModel):
+    """How much a job may do. deny: not even a plan. plan: plan only. ask: apply needs a person (--yes). auto: a
+    scheduled pipeline may apply it unattended. The first matching rule wins; `default` covers the rest."""
+
+    model_config = ConfigDict(extra="forbid")
+    default: Level = "ask"
+    rules: list[PolicyRule] = []
+
+
 class Core(BaseModel):
     model_config = ConfigDict(extra="forbid")
     secrets: Secrets = Secrets()
@@ -31,6 +51,10 @@ class Core(BaseModel):
     scripts_dir: str = "scripts"
     paths: dict[str, str] = {}
     schedule_wrapper: list[str] = []
+    policy: Policy = Policy()
+    inventory: dict[
+        str, dict[str, str]
+    ] = {}  # kind -> name -> value, for example stacks: {media: ~/docker/compose.yml}
 
 
 class PluginBlock(BaseModel):
@@ -66,6 +90,21 @@ class Config:
     def resolve(self, text: str) -> Path:
         path = Path(text).expanduser()
         return path if path.is_absolute() else (self.directory.parent / path).resolve()
+
+    def level_for(self, ref: str) -> tuple[str, str]:
+        """The policy level of "plugin.job" and the rule that set it ("default" when none matched)."""
+        name = ref.partition(".")[0]
+        for rule in self.core.policy.rules:
+            if fnmatch.fnmatch(ref, rule.match) or fnmatch.fnmatch(name, rule.match):
+                return rule.level, rule.match
+        return self.core.policy.default, "default"
+
+    @property
+    def inventory(self) -> dict[str, dict[str, str]]:
+        return {
+            kind: {n: str(self.resolve(v)) if "/" in v or v.startswith("~") else v for n, v in items.items()}
+            for kind, items in self.core.inventory.items()
+        }
 
     @property
     def state_dir(self) -> Path:
