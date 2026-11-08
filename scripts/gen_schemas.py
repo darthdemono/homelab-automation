@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Writes (or with --check, verifies) the JSON schemas of the three config files."""
 
 import json

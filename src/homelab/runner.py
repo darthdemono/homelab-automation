@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Plan, apply and undo. Every run is a JSON file in the ledger; nothing is ever deleted."""
 
 from __future__ import annotations

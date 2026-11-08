@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """`homelab plugin new`: a private plugin starts as its own folder with a manifest, tests and a README."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Finds plugins: installed entry points plus the private custom/ folder."""
 
 from __future__ import annotations

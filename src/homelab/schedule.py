@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Renders systemd user units from jobs.yaml. Nothing is enabled for you."""
 
 from __future__ import annotations

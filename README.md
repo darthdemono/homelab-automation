@@ -14,4 +14,8 @@ homelab schedule --write ~/.config/systemd/user
 homelab plugin-new my_plugin    # scaffold a private plugin in custom/
 ```
 
-See `docs/ARCHITECTURE.md`. Licence: Apache-2.0, see `NOTICE`.
+See `docs/ARCHITECTURE.md`.
+
+## Licence
+
+Copyright 2026 Jubair Hasan (DarthDemono). Licensed under the [Apache License, Version 2.0](LICENSE). The [NOTICE](NOTICE) file must stay with every copy and derivative.

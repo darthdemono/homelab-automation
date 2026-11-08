@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Public, versioned contract for homelab-automation plugins."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Checks a plugin against the contract before anyone relies on it."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """The three YAML files: homelab.yaml (core), plugins.yaml (plugin blocks), jobs.yaml (pipelines)."""
 
 from __future__ import annotations

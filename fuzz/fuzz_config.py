@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jubair Hasan (DarthDemono)
 """Fuzz target: the three YAML config files are hand-written, so their parsing must never crash.
 
 Run: uv run --with atheris python fuzz/fuzz_config.py -max_total_time=60
