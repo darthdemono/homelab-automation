@@ -1,0 +1,20 @@
+# homelab-automation
+
+> A plugin engine for homelab automation, built for AI agents. Every change is planned first, stored, applied exactly as reviewed, and reversible. The interface is one CLI, `homelab`, with a JSON contract and no MCP server.
+
+Start here: run `homelab describe` once (the whole CLI contract as JSON), then `homelab scripts <words>` to find a task, `homelab plan <script> --set key=value`, show the plan to the owner, `homelab apply latest --yes`, `homelab show latest`. Reverse with `homelab undo latest --yes`.
+
+## Docs
+
+- [CLI contract](docs/CLI.md): envelope, exit codes, scripts and the nudge, policy levels
+- [Ecosystem](docs/ECOSYSTEM.md): what ships and what is planned, with status
+- [Secrets](docs/UNV.md): UnENVerse, and the .env fallback
+- [Architecture](docs/ARCHITECTURE.md): the invariants
+- [Threat model](THREAT_MODEL.md): what is and is not defended
+- [Verify it yourself](docs/VERIFY.md): check the claims
+- [Publishing](docs/PUBLISHING.md): build, release, keep local files local
+
+## Optional
+
+- [Operating skill](skills/homelab-ops/SKILL.md): `homelab skill` prints it, `homelab skill --install ~/.claude/skills` installs it
+- [Changelog](CHANGELOG.md)

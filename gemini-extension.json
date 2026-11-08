@@ -1,0 +1,9 @@
+{
+  "name": "homelab-automation",
+  "version": "0.1.0",
+  "description": "Operate a homelab through the homelab CLI: plan first, apply exactly what was reviewed, undo anything.",
+  "author": "Jubair Hasan (DarthDemono)",
+  "homepage": "https://github.com/darthdemono/homelab-automation",
+  "repository": "https://github.com/darthdemono/homelab-automation",
+  "contextFileName": "AGENTS.md"
+}

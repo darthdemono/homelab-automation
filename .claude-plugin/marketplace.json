@@ -1,0 +1,16 @@
+{
+  "name": "homelab-automation",
+  "owner": { "name": "Jubair Hasan (DarthDemono)" },
+  "metadata": { "description": "Plan-first, undoable homelab automation for AI agents.", "version": "0.1.0" },
+  "plugins": [
+    {
+      "name": "homelab-automation",
+      "source": "./",
+      "description": "The homelab-ops skill for the homelab CLI. Install the CLI itself from the repository (see README).",
+      "version": "0.1.0",
+      "category": "automation",
+      "tags": ["homelab", "docker", "automation"],
+      "homepage": "https://github.com/darthdemono/homelab-automation"
+    }
+  ]
+}
