@@ -64,6 +64,11 @@ class Context:
     plugin: str
     paths: Mapping[str, Path] = field(default_factory=dict)
     env: Mapping[str, str] = field(default_factory=lambda: os.environ)
+    inventory: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # kind -> name -> value, from homelab.yaml
+
+    def named(self, kind: str, name: str) -> str | None:
+        """Look a target up by name (for example kind "stacks"), so a caller never passes a raw path."""
+        return self.inventory.get(kind, {}).get(name)
 
     def path(self, key: str) -> Path:
         return self.paths[key]
@@ -128,6 +133,8 @@ def script(
     nudge: Nudge | None = None,
     options: type[BaseModel] = NoOptions,
     example: dict[str, Any] | None = None,
+    apply_action: Callable[[Context, Any, Action], dict[str, Any]] | None = None,
+    undo_action: Callable[[Context, Any, dict[str, Any]], None] | None = None,
 ) -> Callable[[Callable[[Context, Any], Plan]], Plugin]:
     """Turn one function, `plan(ctx, options) -> Plan`, into a script: a one-job plugin that gets
     plan, apply, undo, audit, secrets and --dry-run from the engine. The function name is the script name."""
@@ -145,6 +152,8 @@ def script(
             config_model=options,
             jobs={"run": Job(summary=summary, plan=function)},
             example=example or {},
+            apply_action=apply_action,
+            undo_action=undo_action,
             tags=list(tags or []),
             status=status,
             nudge=nudge,
