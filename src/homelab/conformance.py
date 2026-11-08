@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from homelab_plugin_api import API_VERSION, Context, Plugin
+from homelab_plugin_api import API_VERSION, SCRIPT_STATUSES, Context, Plugin
 
 from .runner import check_permissions
 
@@ -18,6 +18,13 @@ def check(name: str, plugin: Plugin, ctx: Context | None = None) -> list[str]:
         problems.append(f"api_version {manifest.api_version!r}, engine speaks {API_VERSION!r}")
     if not plugin.jobs:
         problems.append("no jobs")
+    if manifest.category == "script":
+        if plugin.status not in SCRIPT_STATUSES:
+            problems.append(f"status {plugin.status!r} must be one of {', '.join(SCRIPT_STATUSES)}")
+        if plugin.nudge is None or not plugin.nudge.when.strip():
+            problems.append("a script needs a nudge with a `when` hint, so a model knows when to reach for it")
+        if not plugin.tags:
+            problems.append("a script needs at least one tag, so `homelab scripts` can find it")
     ctx = ctx or Context(plugin=name)
     try:
         options = plugin.config_model(**plugin.example)

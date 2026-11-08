@@ -67,17 +67,24 @@ class Runner:
     def context(self, name: str) -> Context:
         return Context(plugin=name, paths=self.config.paths)
 
+    def is_script(self, name: str) -> bool:
+        return name in self.found.plugins and self.found.plugins[name].manifest.category == "script"
+
     def enabled(self, name: str) -> Plugin:
         block = self.config.plugins.get(name)
+        if self.is_script(name) and block is None:
+            return self.found.plugins[name]  # scripts are on by default; a block can set options or switch one off
         if block is None or not block.enabled:
             raise Unavailable(f"plugin {name!r} has no enabled block in plugins.yaml")
         if name not in self.found.plugins:
             raise Unavailable(f"plugin {name!r} did not load: {self.found.errors.get(name, 'not found')}")
         return self.found.plugins[name]
 
-    def options(self, name: str):
+    def options(self, name: str, overrides: dict | None = None):
+        block = self.config.plugins.get(name)
+        given = {**(block.options if block else {}), **(overrides or {})}
         try:
-            return self.enabled(name).config_model(**self.config.plugins[name].options)
+            return self.enabled(name).config_model(**given)
         except ValidationError as err:
             problems = err.errors(include_url=False, include_context=False, include_input=False)
             raise Invalid(
@@ -135,6 +142,10 @@ class Runner:
         """`plugin.job`, or a bare job name when exactly one enabled plugin has it."""
         if "." in ref:
             return ref
+        if ref in self.found.plugins and not self._on(ref):
+            raise Unavailable(f"{ref!r} is switched off or has no enabled block in plugins.yaml")
+        if ref in self.found.plugins and self._on(ref) and len(self.found.plugins[ref].jobs) == 1:
+            return f"{ref}.{next(iter(self.found.plugins[ref].jobs))}"
         hits = [f"{n}.{j}" for n, p in self.found.plugins.items() if self._on(n) for j in p.jobs if j == ref]
         if len(hits) == 1:
             return hits[0]
@@ -146,9 +157,11 @@ class Runner:
 
     def _on(self, name: str) -> bool:
         block = self.config.plugins.get(name)
-        return block is not None and block.enabled
+        if block is None:
+            return self.is_script(name)
+        return block.enabled
 
-    def make_plan(self, ref: str) -> dict:
+    def make_plan(self, ref: str, overrides: dict | None = None) -> dict:
         ref = self.resolve_job(ref)
         name, _, job_name = ref.partition(".")
         plugin = self.enabled(name)
@@ -156,7 +169,7 @@ class Runner:
             close = [f"{name}.{j}" for j in difflib.get_close_matches(job_name, list(plugin.jobs), 3)]
             raise NotFound(f"plugin {name!r} has no job {job_name!r}", {"suggestions": close} if close else None)
         ctx = self.context(name)
-        plan = plugin.jobs[job_name].plan(ctx, self.options(name))
+        plan = plugin.jobs[job_name].plan(ctx, self.options(name, overrides))
         plan.job = ref
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:
@@ -166,6 +179,7 @@ class Runner:
             "ref": ref,
             "status": "planned",
             "plan": plan.model_dump(),
+            "options": overrides or {},
             "undo": [],
             "error": None,
         }
@@ -181,7 +195,7 @@ class Runner:
         name = record["ref"].partition(".")[0]
         plugin = self.enabled(name)
         ctx = self.context(name)
-        options = self.options(name)
+        options = self.options(name, record.get("options"))
         plan = Plan(**record["plan"])
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:
@@ -293,7 +307,7 @@ class Runner:
             elif step["kind"] == "plugin":
                 if plugin.undo_action is None:
                     raise Invalid(f"plugin {name!r} has no undo_action")
-                plugin.undo_action(self.context(name), self.options(name), step["data"])
+                plugin.undo_action(self.context(name), self.options(name, record.get("options")), step["data"])
             else:
                 skipped.append(step["describe"])
         record["status"] = "undone"

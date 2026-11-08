@@ -28,6 +28,7 @@ class Core(BaseModel):
     secrets: Secrets = Secrets()
     state_dir: str = "state"
     custom_dir: str = "custom"
+    scripts_dir: str = "scripts"
     paths: dict[str, str] = {}
     schedule_wrapper: list[str] = []
 
@@ -73,6 +74,11 @@ class Config:
     @property
     def custom_dir(self) -> Path:
         return self.resolve(self.core.custom_dir)
+
+    @property
+    def script_dirs(self) -> list[Path]:
+        """Bundled scripts, then the private ones in custom/scripts."""
+        return [self.resolve(self.core.scripts_dir), self.custom_dir / "scripts"]
 
     @property
     def paths(self) -> dict[str, Path]:

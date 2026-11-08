@@ -65,7 +65,23 @@ COMMANDS: dict[str, tuple[str, list]] = {
     "plugins": ("list plugins, their state and load errors", []),
     "doctor": ("run the conformance checks and the secret check on every enabled plugin", []),
     "secrets": ("where each declared secret would come from (names only, never values)", []),
-    "plan": ("plan one job, change nothing", [(("target",), {"help": "plugin.job, or a unique job name"}), LIMIT]),
+    "plan": (
+        "plan one job or script, change nothing",
+        [
+            (("target",), {"help": "plugin.job, a script name, or a unique job name"}),
+            (("--set",), {"action": "append", "default": [], "metavar": "KEY=VALUE", "help": "override an option"}),
+            LIMIT,
+        ],
+    ),
+    "scripts": (
+        "find or list scripts: words match name, summary, tags and the `when` hint",
+        [
+            (("words",), {"nargs": "*", "help": "what you want to do"}),
+            (("--tag",), {"help": "only scripts with this tag"}),
+            (("--status",), {"choices": ["one-off", "stable", "retired"], "help": "only scripts with this status"}),
+            (("--limit",), {"type": int, "default": 5, "help": "show at most N entries, 0 for all"}),
+        ],
+    ),
     "apply": ("apply a reviewed run", [(("target",), {"help": "run id, unique prefix or latest"}), YES, DRY]),
     "undo": ("undo an applied run", [(("target",), {"help": "run id, unique prefix or latest"}), YES, DRY]),
     "show": ("show one run", [(("target",), {"help": "run id, unique prefix or latest"}), LIMIT]),
@@ -85,6 +101,10 @@ COMMANDS: dict[str, tuple[str, list]] = {
         [(("--write",), {"metavar": "DIR", "help": "write the units here instead of printing"})],
     ),
     "plugin-new": ("scaffold a private plugin in custom/", [(("name",), {})]),
+    "script-new": (
+        "scaffold a script with its nudge in custom/scripts (private) or scripts (public)",
+        [(("name",), {}), (("--public",), {"action": "store_true", "help": "write to the tracked scripts/ folder"})],
+    ),
     "schema": ("print the JSON schema of the three config files", []),
     "completions": ("print a shell completion script", [(("shell",), {"choices": ["bash", "zsh", "fish"]})]),
 }
@@ -192,7 +212,7 @@ class App:
 
     @cached_property
     def found(self):
-        return discover(self.config.custom_dir)
+        return discover(self.config.custom_dir, self.config.script_dirs)
 
     @cached_property
     def runner(self) -> Runner:
@@ -214,7 +234,14 @@ class App:
 
     def plugin_state(self, name: str) -> str:
         block = self.config.plugins.get(name)
-        return "off" if block is None else ("disabled" if not block.enabled else "on")
+        if block is None:
+            return "on" if self.runner.is_script(name) else "off"
+        return "disabled" if not block.enabled else "on"
+
+    def nudge_data(self, ref: str, keys: tuple[str, ...]) -> dict:
+        plugin = self.found.plugins.get(ref.partition(".")[0])
+        nudge = plugin.nudge if plugin else None
+        return {k: getattr(nudge, k) for k in keys if nudge and getattr(nudge, k)}
 
     def view(self, record: dict, limit: int) -> dict:
         shown = dict(record)
@@ -251,6 +278,12 @@ class App:
             "example": plugin.example,
             "jobs": {j: plugin.jobs[j].summary for j in ([job] if job else plugin.jobs)},
         }
+        if plugin.manifest.category == "script":
+            doc |= {
+                "tags": plugin.tags,
+                "status": plugin.status,
+                "nudge": self.nudge_data(name, ("when", "before", "after", "avoid")),
+            }
         return Result("describe", doc, raw=True)
 
     def cmd_status(self) -> Result:
@@ -289,6 +322,7 @@ class App:
                 "jobs": sorted(p.jobs),
             }
             for n, p in sorted(self.found.plugins.items())
+            if p.manifest.category != "script"
         ]
         missing = [n for n in self.config.plugins if n not in self.found.plugins and n not in self.found.errors]
         text = [f"{r['name']:<18} {r['state']:<9} {r['origin']:<10} {r['summary']}" for r in rows]
@@ -311,9 +345,10 @@ class App:
         results, bad = [], 0
         wanted = secrets.declared(self.config, self.found)
         where = secrets.sources(self.config, list(wanted)) if wanted else {}
-        for name, block in self.config.plugins.items():
-            if not block.enabled:
-                continue
+        names = [n for n, b in self.config.plugins.items() if b.enabled]
+        names += [n for n in self.found.plugins if self.runner.is_script(n) and n not in self.config.plugins]
+        names += [k for k in self.found.errors if k.startswith("script:")]
+        for name in names:
             if name in self.found.errors:
                 problems = [self.found.errors[name]]
             elif name in self.found.plugins:
@@ -338,8 +373,19 @@ class App:
     def cmd_plan(self) -> Result:
         ref = self.runner.resolve_job(self.args.target)
         self.load_secrets([ref.partition(".")[0]])
-        record = self.runner.make_plan(ref)
-        return Result("plan", self.view(record, self.args.limit), self.lines(self.view(record, self.args.limit)))
+        record = self.runner.make_plan(ref, parse_sets(self.args.set))
+        shown = self.view(record, self.args.limit)
+        data = dict(shown)
+        text = self.lines(shown)
+        hints = self.nudge_data(ref, ("before", "avoid"))
+        if hints:
+            data["nudge"] = hints
+            text += [f"  {k}: {v}" for k, v in hints.items()]
+        if record["plan"]["actions"]:
+            data["ask_owner"] = True
+            data["next"] = [f"homelab apply {record['id']} --yes"]
+            text.append(f"next: show this plan to the owner, then homelab apply {record['id']} --yes")
+        return Result("plan", data, text)
 
     def cmd_show(self) -> Result:
         record = self.view(self.runner.get(self.args.target), self.args.limit)
@@ -364,7 +410,13 @@ class App:
         self.confirm(f"Apply {len(record['plan']['actions'])} actions of run {record['id']}?")
         self.load_secrets([record["ref"].partition(".")[0]])
         done = self.runner.apply(record["id"])
-        return Result("apply", self.view(done, 20), self.lines(self.view(done, 20)))
+        data = self.view(done, 20)
+        text = self.lines(data)
+        hints = self.nudge_data(record["ref"], ("after",))
+        if hints:
+            data["nudge"] = hints
+            text.append(f"after: {hints['after']}")
+        return Result("apply", data, text)
 
     def cmd_undo(self) -> Result:
         record = self.runner.get(self.args.target)
@@ -439,6 +491,60 @@ class App:
             raise Conflict(f"{err} already exists") from err
         return Result("plugin-new", {"created": str(folder)}, [f"created {folder}"])
 
+    def cmd_scripts(self) -> Result:
+        words = [w.lower() for w in self.args.words]
+        rows = []
+        for name, plugin in sorted(self.found.plugins.items()):
+            if plugin.manifest.category != "script":
+                continue
+            if self.args.tag and self.args.tag not in plugin.tags:
+                continue
+            if self.args.status and plugin.status != self.args.status:
+                continue
+            when = plugin.nudge.when if plugin.nudge else ""
+            haystack = " ".join([name.replace("_", " "), plugin.manifest.summary, " ".join(plugin.tags), when]).lower()
+            score = sum(haystack.count(w) for w in words)
+            if words and not score:
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "status": plugin.status,
+                    "tags": plugin.tags,
+                    "summary": plugin.manifest.summary,
+                    "when": when,
+                    "score": score,
+                }
+            )
+        rows.sort(key=lambda r: (-r["score"], r["name"]))
+        shown = rows[: self.args.limit] if self.args.limit else rows
+        text = [
+            f"{r['name']:<24} {r['status']:<8} {r['summary']}" + (f"  (when: {r['when']})" if r["when"] else "")
+            for r in shown
+        ]
+        if len(rows) > len(shown):
+            text.append(f"... {len(rows) - len(shown)} more, narrow it with --tag or more words")
+        errors = {k: v for k, v in self.found.errors.items() if k.startswith("script:")}
+        text += [f"{k:<24} BROKEN   {v}" for k, v in errors.items()]
+        data = {"scripts": shown, "left_out": len(rows) - len(shown), "broken": errors}
+        return Result(
+            "scripts", data, text or ["no script matches; try fewer words, or write one with `homelab script-new`"]
+        )
+
+    def cmd_script_new(self) -> Result:
+        folder = self.config.script_dirs[0 if self.args.public else 1]
+        try:
+            path = scaffold.create_script(folder, self.args.name)
+        except ValueError as err:
+            raise Invalid(str(err)) from err
+        except FileExistsError as err:
+            from .errors import Conflict
+
+            raise Conflict(f"{err} already exists") from err
+        return Result(
+            "script-new", {"created": str(path)}, [f"created {path}", "fill in the nudge, then `homelab doctor`"]
+        )
+
     def cmd_schema(self) -> Result:
         doc = {
             "homelab.yaml": Core.model_json_schema(),
@@ -450,6 +556,20 @@ class App:
     def cmd_completions(self) -> Result:
         script = completions(self.args.shell)
         return Result("completions", {"shell": self.args.shell, "script": script}, [script.rstrip("\n")])
+
+
+def parse_sets(items: list[str]) -> dict:
+    """`--set key=value` pairs; a value is JSON when it parses as JSON (5, true, ["a"]), text otherwise."""
+    out = {}
+    for item in items:
+        key, sep, value = item.partition("=")
+        if not sep or not key:
+            raise Invalid(f"--set expects KEY=VALUE, got {item!r}")
+        try:
+            out[key] = json.loads(value)
+        except ValueError:
+            out[key] = value
+    return out
 
 
 def _dump(doc: dict, pretty: bool) -> str:

@@ -32,7 +32,19 @@ def load_plugin_file(name: str, path: Path) -> Plugin:
     return module.PLUGIN
 
 
-def discover(custom_dir: Path) -> Found:
+def load_scripts(path: Path) -> list[Plugin]:
+    """Every Plugin a script file defines (a decorated function, a script_exec call, or PLUGIN)."""
+    spec = importlib.util.spec_from_file_location(f"homelab_script_{path.stem}", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    found = [v for v in vars(module).values() if isinstance(v, Plugin) and v.manifest.category == "script"]
+    if not found:
+        raise ValueError("no script defined: decorate a function with @script or call script_exec")
+    return found
+
+
+def discover(custom_dir: Path, script_dirs: list[Path] | None = None) -> Found:
     found = Found()
 
     def add(key: str, origin: str, loader) -> None:
@@ -55,4 +67,22 @@ def discover(custom_dir: Path) -> Found:
                 add(item.name, "custom", lambda i=item: load_plugin_file(i.name, i / "__init__.py"))
             elif item.suffix == ".py":
                 add(item.stem, "custom", lambda i=item: load_plugin_file(i.stem, i))
+    for folder, origin in zip(script_dirs or [], ("script", "private-script"), strict=False):
+        if not folder.is_dir():
+            continue
+        for path in sorted(folder.glob("*.py")):
+            if path.name.startswith(("_", ".")):
+                continue
+            try:
+                scripts = load_scripts(path)
+            except Exception as err:
+                found.errors[f"script:{path.stem}"] = f"{type(err).__name__}: {err}"
+                continue
+            for plugin in scripts:
+                name = plugin.manifest.name
+                if name in found.plugins:
+                    found.errors[f"script:{path.stem}"] = f"name {name!r} already used by {found.origin[name]}"
+                    continue
+                found.plugins[name] = plugin
+                found.origin[name] = origin
     return found

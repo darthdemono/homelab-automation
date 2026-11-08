@@ -65,7 +65,11 @@ def unv_args(config: Config, names: list[str]) -> list[str]:
         args += ["--project", config.core.secrets.project]
     for name in names:
         entry = config.core.secrets.entries.get(name)
-        args += ["--entry", f"{entry}={name}" if entry else name]
+        if entry:
+            provider, _, field = entry.partition(":")  # "provider" or "provider:field"
+            args += ["--entry", f"{provider}={name}" + (f":{field}" if field else "")]
+        else:
+            args += ["--entry", name]
     return args
 
 
