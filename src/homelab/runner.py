@@ -4,21 +4,26 @@
 
 from __future__ import annotations
 
+import difflib
+import getpass
 import hashlib
 import json
+import os
+import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
 from homelab_plugin_api import Action, Context, Manifest, Plan, Plugin
+from pydantic import ValidationError
 
 from .config import Config
+from .errors import Ambiguous, Conflict, Denied, Invalid, NotFound, RunError, Unavailable
 from .registry import Found
+from .secrets import scrub
 
-
-class RunError(Exception):
-    pass
+SECRET_REF = re.compile(r"\{\{secret:([A-Za-z0-9_]+)\}\}")
 
 
 def _hash(text: str) -> str:
@@ -65,40 +70,97 @@ class Runner:
     def enabled(self, name: str) -> Plugin:
         block = self.config.plugins.get(name)
         if block is None or not block.enabled:
-            raise RunError(f"plugin {name!r} has no enabled block in plugins.yaml")
+            raise Unavailable(f"plugin {name!r} has no enabled block in plugins.yaml")
         if name not in self.found.plugins:
-            raise RunError(f"plugin {name!r} did not load: {self.found.errors.get(name, 'not found')}")
+            raise Unavailable(f"plugin {name!r} did not load: {self.found.errors.get(name, 'not found')}")
         return self.found.plugins[name]
 
     def options(self, name: str):
-        return self.enabled(name).config_model(**self.config.plugins[name].options)
+        try:
+            return self.enabled(name).config_model(**self.config.plugins[name].options)
+        except ValidationError as err:
+            problems = err.errors(include_url=False, include_context=False, include_input=False)
+            raise Invalid(
+                f"options of plugin {name!r} are invalid: {len(problems)} problem(s)", {"errors": problems}
+            ) from err
 
     def _save(self, record: dict) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
-        (self.runs_dir / f"{record['id']}.json").write_text(json.dumps(record, indent=2))
+        text = scrub(json.dumps(record, indent=2), self._secret_values(record["ref"].partition(".")[0]))
+        (self.runs_dir / f"{record['id']}.json").write_text(text)
+        record.clear()
+        record.update(json.loads(text))  # callers see the scrubbed record, never the secret
 
-    def get(self, run_id: str) -> dict:
-        path = self.runs_dir / f"{run_id}.json"
-        if not path.exists():
-            raise RunError(f"no run {run_id!r}")
-        return json.loads(path.read_text())
+    def _secret_values(self, name: str) -> dict[str, str]:
+        plugin = self.found.plugins.get(name)
+        names = plugin.manifest.secrets if plugin else []
+        return {n: os.environ[n] for n in names if len(os.environ.get(n, "")) >= 8}
 
-    def runs(self) -> list[dict]:
+    def _ids(self) -> list[str]:
         if not self.runs_dir.is_dir():
             return []
-        return [json.loads(p.read_text()) for p in sorted(self.runs_dir.glob("*.json"))]
+        return [p.stem for p in sorted(self.runs_dir.glob("*.json"))]
+
+    def resolve(self, ref: str) -> str:
+        """A run id, a unique prefix of one, or `latest`. Never guesses between several."""
+        ids = self._ids()
+        if ref == "latest":
+            if ids:
+                return ids[-1]
+            raise NotFound("no runs yet")
+        if ref in ids:
+            return ref
+        hits = [i for i in ids if i.startswith(ref)]
+        if len(hits) == 1:
+            return hits[0]
+        if hits:
+            raise Ambiguous(f"{ref!r} matches {len(hits)} runs", {"candidates": hits})
+        close = difflib.get_close_matches(ref, ids, 3)
+        raise NotFound(f"no run {ref!r}", {"suggestions": close} if close else None)
+
+    def get(self, ref: str) -> dict:
+        return json.loads((self.runs_dir / f"{self.resolve(ref)}.json").read_text())
+
+    def runs(self) -> list[dict]:
+        return [json.loads((self.runs_dir / f"{i}.json").read_text()) for i in self._ids()]
+
+    def audit(self, event: str, **fields) -> None:
+        """Append one line to state/audit.jsonl for every plan, apply and undo."""
+        self.config.state_dir.mkdir(parents=True, exist_ok=True)
+        line = {"ts": datetime.now(UTC).isoformat(), "user": getpass.getuser(), "event": event, **fields}
+        with (self.config.state_dir / "audit.jsonl").open("a") as handle:
+            handle.write(json.dumps(line) + "\n")
+
+    def resolve_job(self, ref: str) -> str:
+        """`plugin.job`, or a bare job name when exactly one enabled plugin has it."""
+        if "." in ref:
+            return ref
+        hits = [f"{n}.{j}" for n, p in self.found.plugins.items() if self._on(n) for j in p.jobs if j == ref]
+        if len(hits) == 1:
+            return hits[0]
+        if hits:
+            raise Ambiguous(f"job {ref!r} exists in several plugins", {"candidates": hits})
+        every = [f"{n}.{j}" for n, p in self.found.plugins.items() if self._on(n) for j in p.jobs]
+        close = difflib.get_close_matches(ref, every, 3)
+        raise NotFound(f"no job {ref!r}", {"suggestions": close} if close else None)
+
+    def _on(self, name: str) -> bool:
+        block = self.config.plugins.get(name)
+        return block is not None and block.enabled
 
     def make_plan(self, ref: str) -> dict:
+        ref = self.resolve_job(ref)
         name, _, job_name = ref.partition(".")
         plugin = self.enabled(name)
         if job_name not in plugin.jobs:
-            raise RunError(f"plugin {name!r} has no job {job_name!r}")
+            close = [f"{name}.{j}" for j in difflib.get_close_matches(job_name, list(plugin.jobs), 3)]
+            raise NotFound(f"plugin {name!r} has no job {job_name!r}", {"suggestions": close} if close else None)
         ctx = self.context(name)
         plan = plugin.jobs[job_name].plan(ctx, self.options(name))
         plan.job = ref
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:
-            raise RunError("plan refused:\n  " + "\n  ".join(problems))
+            raise Denied("plan refused:\n  " + "\n  ".join(problems), {"problems": problems})
         record = {
             "id": datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ"),
             "ref": ref,
@@ -108,12 +170,14 @@ class Runner:
             "error": None,
         }
         self._save(record)
+        self.audit("plan", run=record["id"], ref=ref, actions=len(plan.actions))
         return record
 
-    def apply(self, run_id: str) -> dict:
-        record = self.get(run_id)
+    def check_apply(self, ref: str) -> tuple[dict, Plugin, Context, object, Plan]:
+        """Everything `apply` checks before it changes anything, so `--dry-run` can run it alone."""
+        record = self.get(ref)
         if record["status"] != "planned":
-            raise RunError(f"run {run_id} is {record['status']}, only a planned run can be applied")
+            raise Conflict(f"run {record['id']} is {record['status']}, only a planned run can be applied")
         name = record["ref"].partition(".")[0]
         plugin = self.enabled(name)
         ctx = self.context(name)
@@ -121,14 +185,19 @@ class Runner:
         plan = Plan(**record["plan"])
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:
-            raise RunError("plan refused:\n  " + "\n  ".join(problems))
+            raise Denied("plan refused:\n  " + "\n  ".join(problems), {"problems": problems})
         for action in plan.actions:
             if action.kind == "move":
                 src, dst = Path(action.args["src"]), Path(action.args["dst"])
                 if not src.exists() or dst.exists():
-                    raise RunError(f"changed since the plan, nothing applied: {action.describe}")
+                    raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
             elif action.kind == "quarantine" and not Path(action.args["path"]).exists():
-                raise RunError(f"changed since the plan, nothing applied: {action.describe}")
+                raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
+        return record, plugin, ctx, options, plan
+
+    def apply(self, ref: str) -> dict:
+        record, plugin, ctx, options, plan = self.check_apply(ref)
+        run_id = record["id"]
         try:
             for number, action in enumerate(plan.actions):
                 record["undo"].append(self._do(record["id"], number, action, plugin, ctx, options))
@@ -136,12 +205,32 @@ class Runner:
         except Exception as err:
             record["status"], record["error"] = "failed", f"{type(err).__name__}: {err}"
             self._save(record)
+            self.audit("apply", run=run_id, ref=record["ref"], result="failed", error=record["error"])
             raise RunError(f"run {run_id} failed, undo it to restore: {record['error']}") from err
         record["status"] = "applied"
         self._save(record)
+        self.audit("apply", run=run_id, ref=record["ref"], result="applied", actions=len(plan.actions))
         return record
 
+    def _expand(self, value):
+        """Fill `{{secret:NAME}}` placeholders from the environment, at apply time only."""
+        if isinstance(value, str):
+
+            def fill(match):
+                name = match.group(1)
+                if name not in os.environ:
+                    raise Unavailable(f"secret {name} is not available; see `homelab secrets`")
+                return os.environ[name]
+
+            return SECRET_REF.sub(fill, value)
+        if isinstance(value, list):
+            return [self._expand(v) for v in value]
+        if isinstance(value, dict):
+            return {k: self._expand(v) for k, v in value.items()}
+        return value
+
     def _do(self, run_id: str, number: int, action: Action, plugin: Plugin, ctx: Context, options) -> dict:
+        action = action.model_copy(update={"args": self._expand(action.args)})
         a = action.args
         if action.kind == "move":
             Path(a["dst"]).parent.mkdir(parents=True, exist_ok=True)
@@ -165,23 +254,28 @@ class Runner:
                 return {"kind": "exec", "argv": a["undo_argv"]}
             return {"kind": "irreversible", "describe": action.describe}
         if plugin.apply_action is None:
-            raise RunError(f"plugin {plugin.manifest.name!r} has no apply_action")
+            raise Invalid(f"plugin {plugin.manifest.name!r} has no apply_action")
         return {"kind": "plugin", "data": plugin.apply_action(ctx, options, action)}
 
-    def undo(self, run_id: str) -> dict:
-        record = self.get(run_id)
+    def check_undo(self, ref: str) -> tuple[dict, Plugin, list[dict]]:
+        record = self.get(ref)
         if record["status"] not in ("applied", "failed"):
-            raise RunError(f"run {run_id} is {record['status']}, nothing to undo")
-        name = record["ref"].partition(".")[0]
-        plugin = self.enabled(name)
+            raise Conflict(f"run {record['id']} is {record['status']}, nothing to undo")
+        plugin = self.enabled(record["ref"].partition(".")[0])
         steps = list(reversed(record["undo"]))
         for step in steps:
             if step["kind"] == "move" and (not Path(step["src"]).exists() or Path(step["dst"]).exists()):
-                raise RunError(f"changed since the run, nothing undone: {step['src']} -> {step['dst']}")
+                raise Conflict(f"changed since the run, nothing undone: {step['src']} -> {step['dst']}")
             if step["kind"] == "restore":
                 path = Path(step["path"])
                 if not path.exists() or _hash(path.read_text()) != step["wrote"]:
-                    raise RunError(f"{path} was edited after the run, nothing undone")
+                    raise Conflict(f"{path} was edited after the run, nothing undone")
+        return record, plugin, steps
+
+    def undo(self, ref: str) -> dict:
+        record, plugin, steps = self.check_undo(ref)
+        run_id = record["id"]
+        name = plugin.manifest.name
         skipped = []
         for step in steps:
             if step["kind"] == "move":
@@ -198,11 +292,12 @@ class Runner:
                 subprocess.run(step["argv"], check=True)
             elif step["kind"] == "plugin":
                 if plugin.undo_action is None:
-                    raise RunError(f"plugin {name!r} has no undo_action")
+                    raise Invalid(f"plugin {name!r} has no undo_action")
                 plugin.undo_action(self.context(name), self.options(name), step["data"])
             else:
                 skipped.append(step["describe"])
         record["status"] = "undone"
         record["skipped_irreversible"] = skipped
         self._save(record)
+        self.audit("undo", run=run_id, ref=record["ref"], skipped_irreversible=len(skipped))
         return record

@@ -6,13 +6,26 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict
 
 
+class Secrets(BaseModel):
+    """Where plugin secrets come from. `auto` tries the process environment, then UnENVerse
+    (recommended), then a .env file (fallback). Values are never printed or stored."""
+
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["auto", "unv", "dotenv", "env"] = "auto"
+    project: str | None = None  # `unv exec --project NAME`
+    entries: dict[str, str] = {}  # ENV_VAR -> unv entry (PROVIDER), when the names differ
+    dotenv: str = ".env"  # fallback file; refused unless only the owner can read it
+
+
 class Core(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    secrets: Secrets = Secrets()
     state_dir: str = "state"
     custom_dir: str = "custom"
     paths: dict[str, str] = {}
