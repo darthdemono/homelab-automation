@@ -1,0 +1,10 @@
+{
+  "name": "homelab-automation",
+  "description": "Operate a homelab through the homelab CLI: find a script, plan, show the plan, apply exactly what was reviewed, undo anything.",
+  "version": "0.1.0",
+  "author": { "name": "Jubair Hasan (DarthDemono)" },
+  "repository": "https://github.com/darthdemono/homelab-automation",
+  "homepage": "https://github.com/darthdemono/homelab-automation",
+  "license": "Apache-2.0",
+  "keywords": ["homelab", "automation", "docker", "agents", "skills"]
+}

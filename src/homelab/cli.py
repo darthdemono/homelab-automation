@@ -78,6 +78,14 @@ COMMANDS: dict[str, tuple[str, list]] = {
         "what needs attention now: failed or stale runs, a broken audit chain, and the latest changes, ranked",
         [(("--limit",), {"type": int, "default": 10, "help": "show at most N items, 0 for all"})],
     ),
+    "skill": (
+        "print the operating skill for this version, or install it for an agent",
+        [(("--install",), {"metavar": "DIR", "help": "write DIR/homelab-ops/SKILL.md, for example ~/.claude/skills"})],
+    ),
+    "demo": (
+        "create a sandbox with fake files to try plan, apply and undo safely",
+        [(("--dir",), {"default": "homelab-demo", "help": "where to create it (must not exist yet)"})],
+    ),
     "audit": (
         "show the latest audit events, or check the hash chain",
         [
@@ -490,6 +498,49 @@ class App:
         if len(items) > len(shown):
             text.append(f"... {len(items) - len(shown)} more")
         return Result("attention", {"items": shown, "left_out": len(items) - len(shown)}, text)
+
+    def cmd_skill(self) -> Result:
+        from importlib import resources
+
+        text = resources.files("homelab").joinpath("homelab-ops.md").read_text()
+        if not self.args.install:
+            return Result("skill", {"text": text}, [text.rstrip("\n")])
+        target = Path(self.args.install).expanduser() / "homelab-ops"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "SKILL.md").write_text(text)
+        return Result("skill", {"installed": str(target / "SKILL.md")}, [f"installed {target / 'SKILL.md'}"])
+
+    def cmd_demo(self) -> Result:
+        folder = Path(self.args.dir).expanduser().resolve()
+        if folder.exists():
+            from .errors import Conflict
+
+            raise Conflict(f"{folder} already exists; pick another --dir")
+        scripts = Path(__file__).resolve().parent.parent.parent / "scripts"
+        if not scripts.is_dir():
+            raise Invalid("the bundled scripts folder was not found; run the demo from a clone of the repository")
+        (folder / "config").mkdir(parents=True)
+        (folder / "media" / "Music" / "Album").mkdir(parents=True)
+        for name in ("Thumbs.db", "Music/Album/desktop.ini", "Music/Album/01-track.flac", "Music/Album/.DS_Store"):
+            (folder / "media" / name).write_text("demo\n")
+        config = f"state_dir: state\ncustom_dir: custom\nscripts_dir: {scripts}\npaths:\n  media: media\n"
+        (folder / "config" / "homelab.yaml").write_text(config)
+        cfg = folder / "config"
+        steps = [
+            f"homelab --config {cfg} scripts junk",
+            f"homelab --config {cfg} plan clean_junk_files --set path={folder / 'media'}",
+            f"homelab --config {cfg} apply latest --yes",
+            f"homelab --config {cfg} undo latest --yes",
+        ]
+        return Result(
+            "demo",
+            {"dir": str(folder), "config": str(cfg), "try": steps},
+            [
+                f"created {folder} with a fake library (3 junk files, 1 track)",
+                "try, in this order:",
+                *[f"  {s}" for s in steps],
+            ],
+        )
 
     def cmd_audit(self) -> Result:
         if self.args.verify:
