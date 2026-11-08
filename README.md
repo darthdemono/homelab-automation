@@ -11,7 +11,7 @@ flowchart LR
     AG["AI agent or you<br/>any shell"]
     V["UnENVerse vault<br/>recommended"]
     ENV[".env fallback<br/>mode 600"]
-    H["Your homelab<br/>media server, libraries,<br/>docker, torrent client, systemd"]
+    H["Your homelab<br/>Docker and Compose stacks,<br/>media libraries, systemd,<br/>torrent client, any CLI"]
 
     subgraph REPO["homelab-automation"]
         DOC["AGENTS.md<br/>skills/homelab-ops<br/>Agents/Index.md, private"]
@@ -84,6 +84,19 @@ uv run homelab apply latest --yes       # applies exactly the plan you reviewed
 uv run homelab undo latest --yes
 ```
 
+## What it can do
+
+**Today** (shipped and tested): plan, apply and undo any change made of file moves, writes, quarantines and declared commands; find a task by words; run on a schedule; keep secrets out of every file and printout; and a first set of scripts:
+
+| Script | What it does |
+| --- | --- |
+| `clean_junk_files` | quarantine `Thumbs.db`, `desktop.ini`, `.DS_Store` and similar under a library path |
+| `docker_ps` | list containers with state, status and image (read only) |
+| `compose_restart` | restart some or all services of a Docker Compose file |
+| `compose_update` | `docker compose pull`, then `up -d` |
+
+**Docker ecosystem.** Any stack that runs under the `docker` CLI with Compose v2 works now through those three scripts. Application-aware plugins are on the roadmap, not shipped: Jellyfin library naming and verification, Sonarr, Radarr, Prowlarr and Bazarr fixes, qBittorrent behind a VPN container with port forwarding and cross-seed, Navidrome music-library cleanup, Immich and Nextcloud through their APIs, and monitoring collectors. [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) lists each with its status. For anything else, describe the job to your agent and it writes the script with `homelab script-new`.
+
 ## What you get
 
 - **Plan first, apply what was reviewed, undo anything.** A plan is stored before anything runs, and `apply` refuses if the files changed since. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -91,13 +104,15 @@ uv run homelab undo latest --yes
 - **Scripts with a nudge.** A one-off fix is one decorated function that gets plan, apply, undo and audit for free, and carries four short hints (`when`, `before`, `after`, `avoid`) that tell an agent when to use it and what to check. `homelab scripts` finds one, `homelab script-new` writes the next.
 - **Plugins.** A plugin declares what it may touch, and the engine refuses anything else. General plugins are bundled; your own live in the gitignored `custom/` folder, one folder each, with the same contract. Three YAML files configure everything.
 - **Secrets without leaks.** Use [UnENVerse](https://github.com/darthdemono/UnENVerse) (recommended, see [docs/UNV.md](docs/UNV.md)) or a mode-600 `.env` fallback (see [.env.example](.env.example)). Values are never printed, logged or stored; plans carry placeholders.
-- **A public repo that works with your private files.** `AGENTS.md` is generic and tells a model to read `Agents/Index.md` if it exists. That folder, `custom/`, `state/`, `config/*.yaml`, `Handoff/` and `Research/` are gitignored.
+- **A public repo that works with your private files.** `AGENTS.md` is generic and tells a model to read `Agents/Index.md` if it exists. That folder, `custom/`, `state/`, `config/*.yaml`, `Handoff/` and `Research/` are gitignored, and a leak audit runs before every push. See [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Documents
 
 | | |
 | --- | --- |
+| [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) | What it can do and what it supports, with the status of each item |
 | [docs/CLI.md](docs/CLI.md) | The CLI contract: envelope, exit codes, scripts and the nudge |
+| [docs/PUBLISHING.md](docs/PUBLISHING.md) | Building, publishing, releasing and keeping local files local |
 | [docs/UNV.md](docs/UNV.md) | Secrets with UnENVerse, and the `.env` fallback |
 | [docs/SECRETS.md](docs/SECRETS.md) | The engine side of secrets |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Pipeline, invariants and decisions |
