@@ -71,6 +71,11 @@ class Context:
     def secret(self, env_name: str) -> str | None:
         return self.env.get(env_name) or None
 
+    def secret_ref(self, env_name: str) -> str:
+        """Put this in an action's args instead of the value: the engine fills it in at apply time,
+        so the plan, the ledger and every printout never hold the secret."""
+        return "{{secret:" + env_name + "}}"
+
 
 @dataclass
 class Job:
