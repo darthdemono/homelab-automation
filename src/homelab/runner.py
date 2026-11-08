@@ -65,7 +65,9 @@ class Runner:
         self.runs_dir = config.state_dir / "runs"
 
     def context(self, name: str) -> Context:
-        return Context(plugin=name, paths=self.config.paths)
+        """`ctx.path("state")` is this plugin's own folder under state/plugins/, for journals and saved copies."""
+        state = self.config.state_dir / "plugins" / name
+        return Context(plugin=name, paths={**self.config.paths, "state": state})
 
     def is_script(self, name: str) -> bool:
         return name in self.found.plugins and self.found.plugins[name].manifest.category == "script"
