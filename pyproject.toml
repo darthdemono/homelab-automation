@@ -42,6 +42,9 @@ select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "S105", "S603", "S607", "E501"]
 "fuzz/*" = ["S101"]
+"tools/*" = ["S603", "S607"]
+# scripts run external programs (docker, ffprobe) by design; the engine checks each exec against the manifest
+"scripts/*" = ["S603", "S607"]
 "src/homelab/runner.py" = ["S603"]
 "src/homelab/cli.py" = ["E501"]
 # secrets.py runs `unv` by name on purpose: UnENVerse is the recommended secret source

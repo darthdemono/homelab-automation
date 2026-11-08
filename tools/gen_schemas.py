@@ -24,7 +24,7 @@ def main() -> int:
             OUT.mkdir(exist_ok=True)
             path.write_text(text)
     if stale:
-        print("stale schemas, run scripts/gen_schemas.py:", ", ".join(stale))
+        print("stale schemas, run tools/gen_schemas.py:", ", ".join(stale))
         return 1
     return 0
 

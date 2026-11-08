@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def generator():
-    spec = importlib.util.spec_from_file_location("gen_env_example", ROOT / "scripts" / "gen_env_example.py")
+    spec = importlib.util.spec_from_file_location("gen_env_example", ROOT / "tools" / "gen_env_example.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
