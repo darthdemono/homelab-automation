@@ -35,5 +35,23 @@ AGENTS*.md
 CODEX*.md
 GEMINI*.md
 
-# The generic guide for any contributor or agent is public; the per-tool and private ones above stay local
+# The generic guide for any contributor is public; the per-tool and private ones above stay local
 !AGENTS.md
+
+# Personal instructions: Agents/Index.md lists them, AGENTS.md points to it
+Agents/
+
+# Local files of migrated tools. Plugins keep these under state/plugins/<name>/; the names are
+# ignored here as well so a copy from an old repo can never be added by accident.
+/reports/
+/plans/
+/cache/
+/journals/
+/data/
+handoff-*.md
+*.journal.jsonl
+*.bak
+*.bak.json
+ops/*.log
+streaming_extractor_music
+.venv-real/
