@@ -23,6 +23,14 @@ from .errors import Ambiguous, Conflict, Denied, Invalid, NotFound, RunError, Un
 from .registry import Found
 from .secrets import scrub
 
+ZERO = "0" * 64
+
+
+def _chain(previous: str, line: dict) -> str:
+    body = json.dumps({k: v for k, v in line.items() if k != "hash"}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256((previous + body).encode()).hexdigest()
+
+
 SECRET_REF = re.compile(r"\{\{secret:([A-Za-z0-9_]+)\}\}")
 
 
@@ -67,7 +75,20 @@ class Runner:
     def context(self, name: str) -> Context:
         """`ctx.path("state")` is this plugin's own folder under state/plugins/, for journals and saved copies."""
         state = self.config.state_dir / "plugins" / name
-        return Context(plugin=name, paths={**self.config.paths, "state": state})
+        return Context(plugin=name, paths={**self.config.paths, "state": state}, inventory=self.config.inventory)
+
+    @property
+    def paused(self) -> bool:
+        return (self.config.state_dir / "PAUSED").exists()
+
+    def set_paused(self, on: bool) -> None:
+        flag = self.config.state_dir / "PAUSED"
+        if on:
+            flag.parent.mkdir(parents=True, exist_ok=True)
+            flag.write_text("paused\n")
+        else:
+            flag.unlink(missing_ok=True)
+        self.audit("pause" if on else "resume")
 
     def is_script(self, name: str) -> bool:
         return name in self.found.plugins and self.found.plugins[name].manifest.category == "script"
@@ -134,11 +155,73 @@ class Runner:
         return [json.loads((self.runs_dir / f"{i}.json").read_text()) for i in self._ids()]
 
     def audit(self, event: str, **fields) -> None:
-        """Append one line to state/audit.jsonl for every plan, apply and undo."""
-        self.config.state_dir.mkdir(parents=True, exist_ok=True)
-        line = {"ts": datetime.now(UTC).isoformat(), "user": getpass.getuser(), "event": event, **fields}
-        with (self.config.state_dir / "audit.jsonl").open("a") as handle:
+        """Append one line to state/audit.jsonl. Each line carries the hash of the one before it, so an edited,
+        removed or reordered line breaks the chain and `homelab audit --verify` says where."""
+        path = self.config.state_dir / "audit.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        previous = ZERO
+        if path.exists():
+            lines = [ln for ln in path.read_text().splitlines() if ln.strip()]
+            if lines:
+                previous = json.loads(lines[-1]).get("hash", ZERO)
+        line = {
+            "ts": datetime.now(UTC).isoformat(),
+            "user": getpass.getuser(),
+            "event": event,
+            **fields,
+            "prev": previous,
+        }
+        line["hash"] = _chain(previous, line)
+        with path.open("a") as handle:
             handle.write(json.dumps(line) + "\n")
+
+    def audit_events(self) -> list[dict]:
+        path = self.config.state_dir / "audit.jsonl"
+        if not path.exists():
+            return []
+        return [json.loads(ln) for ln in path.read_text().splitlines() if ln.strip()]
+
+    def verify_audit(self) -> dict:
+        """Recompute the chain. Lines written before chaining existed (no hash) are allowed only at the start."""
+        previous, legacy, chained = ZERO, 0, 0
+        for number, line in enumerate(self.audit_events(), 1):
+            if "hash" not in line:
+                if chained:
+                    return {
+                        "ok": False,
+                        "events": number,
+                        "legacy": legacy,
+                        "broken_at": number,
+                        "why": "an unchained line after the chain began",
+                    }
+                legacy += 1
+                continue
+            if chained == 0 and line.get("prev") not in (ZERO, None) and legacy == 0:
+                return {
+                    "ok": False,
+                    "events": number,
+                    "legacy": legacy,
+                    "broken_at": number,
+                    "why": "the chain does not start at the beginning",
+                }
+            if chained and line.get("prev") != previous:
+                return {
+                    "ok": False,
+                    "events": number,
+                    "legacy": legacy,
+                    "broken_at": number,
+                    "why": "previous hash does not match",
+                }
+            if _chain(line.get("prev", ZERO), {k: v for k, v in line.items() if k != "hash"}) != line["hash"]:
+                return {
+                    "ok": False,
+                    "events": number,
+                    "legacy": legacy,
+                    "broken_at": number,
+                    "why": "the line was edited",
+                }
+            previous, chained = line["hash"], chained + 1
+        return {"ok": True, "events": legacy + chained, "legacy": legacy, "broken_at": None, "why": ""}
 
     def resolve_job(self, ref: str) -> str:
         """`plugin.job`, or a bare job name when exactly one enabled plugin has it."""
@@ -166,6 +249,11 @@ class Runner:
     def make_plan(self, ref: str, overrides: dict | None = None) -> dict:
         ref = self.resolve_job(ref)
         name, _, job_name = ref.partition(".")
+        level, rule = self.config.level_for(ref)
+        if level == "deny":
+            raise Denied(
+                f"policy: {ref} is denied (rule {rule!r}); even planning it is refused", {"level": level, "rule": rule}
+            )
         plugin = self.enabled(name)
         if job_name not in plugin.jobs:
             close = [f"{name}.{j}" for j in difflib.get_close_matches(job_name, list(plugin.jobs), 3)]
@@ -194,6 +282,14 @@ class Runner:
         record = self.get(ref)
         if record["status"] != "planned":
             raise Conflict(f"run {record['id']} is {record['status']}, only a planned run can be applied")
+        level, rule = self.config.level_for(record["ref"])
+        if level in ("deny", "plan"):
+            raise Denied(
+                f"policy: {record['ref']} is {level}-only (rule {rule!r}), it cannot be applied",
+                {"level": level, "rule": rule},
+            )
+        if self.paused:
+            raise Unavailable("paused: changes are switched off (`homelab resume` turns them back on)")
         name = record["ref"].partition(".")[0]
         plugin = self.enabled(name)
         ctx = self.context(name)

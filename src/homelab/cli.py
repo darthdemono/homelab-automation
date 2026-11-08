@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -63,6 +64,16 @@ COMMANDS: dict[str, tuple[str, list]] = {
     ),
     "status": ("where the CLI is pointed and what it holds", []),
     "plugins": ("list plugins, their state and load errors", []),
+    "policy": ("show the autonomy levels: the default, the rules and the level of every plugin and script", []),
+    "pause": ("switch every apply off (plans and undo still work)", []),
+    "resume": ("switch applies back on", []),
+    "audit": (
+        "show the latest audit events, or check the hash chain",
+        [
+            (("--verify",), {"action": "store_true", "help": "recompute the chain; exit 1 and say where it breaks"}),
+            (("--limit",), {"type": int, "default": 10, "help": "show at most N events, 0 for all"}),
+        ],
+    ),
     "doctor": ("run the conformance checks and the secret check on every enabled plugin", []),
     "secrets": ("where each declared secret would come from (names only, never values)", []),
     "plan": (
@@ -302,6 +313,8 @@ class App:
             "runs": counts,
             "pipelines": len(self.config.pipelines),
             "secrets_provider": self.config.core.secrets.provider,
+            "paused": self.runner.paused,
+            "policy_default": self.config.core.policy.default,
             "unv_installed": secrets.shutil.which("unv") is not None,
         }
         text = [
@@ -329,6 +342,50 @@ class App:
         text += [f"{k:<18} BROKEN    {e}" for k, e in self.found.errors.items()]
         text += [f"{n:<18} MISSING   block in plugins.yaml but no plugin found" for n in missing]
         return Result("plugins", {"plugins": rows, "broken": self.found.errors, "missing": missing}, text)
+
+    def cmd_policy(self) -> Result:
+        pol = self.config.core.policy
+        rows = []
+        for name, plugin in sorted(self.found.plugins.items()):
+            level, rule = self.config.level_for(f"{name}.{next(iter(plugin.jobs))}")
+            rows.append({"name": name, "kind": plugin.manifest.category, "level": level, "rule": rule})
+        data = {
+            "default": pol.default,
+            "rules": [r.model_dump() for r in pol.rules],
+            "paused": self.runner.paused,
+            "targets": rows,
+        }
+        text = [f"default {pol.default}" + ("  PAUSED" if self.runner.paused else "")]
+        text += [f"rule {r.match} -> {r.level}" for r in pol.rules]
+        text += [f"{r['name']:<24} {r['level']:<5} {r['rule']}" for r in rows if r["rule"] != "default"]
+        text.append(
+            "levels: deny (not even a plan), plan (plan only), ask (apply needs --yes), auto (scheduled pipelines may apply)"
+        )
+        return Result("policy", data, text)
+
+    def cmd_pause(self) -> Result:
+        self.runner.set_paused(True)
+        return Result(
+            "pause", {"paused": True}, ["paused: no apply will run until `homelab resume`; plans and undo still work"]
+        )
+
+    def cmd_resume(self) -> Result:
+        self.runner.set_paused(False)
+        return Result("resume", {"paused": False}, ["resumed"])
+
+    def cmd_audit(self) -> Result:
+        if self.args.verify:
+            result = self.runner.verify_audit()
+            text = (
+                [f"audit chain ok: {result['events']} events ({result['legacy']} from before chaining)"]
+                if result["ok"]
+                else [f"audit chain BROKEN at line {result['broken_at']}: {result['why']}"]
+            )
+            return Result("audit", result, text, exit=0 if result["ok"] else 1)
+        events = self.runner.audit_events()
+        shown = events[-self.args.limit :] if self.args.limit else events
+        text = [f"{e['ts'][:19]}  {e['event']:<7} {e.get('ref', '')} {e.get('run', '')[:15]}" for e in shown]
+        return Result("audit", {"events": shown, "left_out": len(events) - len(shown)}, text or ["no events yet"])
 
     def cmd_secrets(self) -> Result:
         wanted = secrets.declared(self.config, self.found)
@@ -447,17 +504,29 @@ class App:
         if applying and not self.args.dry_run:
             self.confirm(f"Plan and apply {len(pipe.steps)} steps of {self.args.pipeline}?")
         self.load_secrets(sorted({s.partition(".")[0] for s in pipe.steps}))
-        records, text = [], []
+        records, text, left = [], [], []
         for step in pipe.steps:
             record = self.runner.make_plan(step)
             if applying and not self.args.dry_run:
-                record = self.runner.apply(record["id"])
+                level, _ = self.config.level_for(step)
+                if os.environ.get("HOMELAB_SCHEDULED") and level != "auto":
+                    left.append(step)
+                    record["plan"]["notes"].append(
+                        f"left for review: policy level is {level}, only auto steps apply unattended"
+                    )
+                else:
+                    record = self.runner.apply(record["id"])
             shown = self.view(record, self.args.limit)
             records.append(shown)
             text += self.lines(shown)
         return Result(
             "run",
-            {"pipeline": self.args.pipeline, "applied": bool(applying and not self.args.dry_run), "runs": records},
+            {
+                "pipeline": self.args.pipeline,
+                "applied": bool(applying and not self.args.dry_run),
+                "left_for_review": left,
+                "runs": records,
+            },
             text,
             dry_run=self.args.dry_run,
         )
