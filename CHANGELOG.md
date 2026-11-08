@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Autonomy and inventory.** `policy` levels (deny, plan, ask, auto) with glob rules, `homelab policy`, `homelab pause` and `resume`, scheduled pipelines apply only `auto` steps (`HOMELAB_SCHEDULED`), `inventory` names for stacks (`stack=NAME` instead of a path). Plugin API 1.3.0: `ctx.named()`, and `apply_action` and `undo_action` on `@script`.
+- **Tamper-evident audit.** Hash-chained `audit.jsonl`, `homelab audit` and `homelab audit --verify`, and `docs/VERIFY.md`.
+- **Reversible `compose_update`:** image ids are recorded before the pull, and `undo` retags them and recreates the services.
+- **`homelab report` and `homelab attention`:** snapshot diff with typed kinds (gone, new, replaced, state, restarts, disk, skipped) and a ranked list of what needs attention.
+- **Long runs:** `apply --detach`, `homelab cancel`, `running` status, interrupted-run detection.
+- **Service scripts (read only):** Radarr, Sonarr, Prowlarr and qBittorrent status, queue, indexer and torrent views.
+- **Onboarding:** `homelab skill [--install]`, `homelab demo`, `llms.txt`, and Claude, Codex and Gemini plugin manifests.
+
 - **First bundled plugin: `nextcloud`** (`plugins/nextcloud`, package `homelab-plugin-nextcloud`, entry point `homelab.plugins`). `put` and `delete` over DAV (CalDAV and CardDAV included) save a copy of what is there before replacing or removing it, and `undo` restores it; an undone creation is saved to `removed/` first, because contacts have no trash. The app password comes from `NEXTCLOUD_APP_PASSWORD`.
 - `ctx.path("state")`: each plugin gets its own folder under `state/plugins/<name>/` for journals and saved copies.
 - Script `import_repo_history`: brings an old repository's full history (local-only `history/full/NAME/*` branches) and notes into the project, with an index.

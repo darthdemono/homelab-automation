@@ -167,6 +167,7 @@ uv run homelab undo latest --yes
 | `compose_restart` | restart some or all services of a Docker Compose file |
 | `compose_update` | `docker compose pull`, then `up -d` |
 | `import_repo_history` | bring an old repo's full history and notes in, locally only, when a tool is merged into this project |
+| `radarr_*`, `sonarr_*`, `prowlarr_*`, `qbittorrent_*` | read-only status, queue, indexer and torrent views |
 
 And the first bundled plugin, **`nextcloud`**: DAV writes (calendar events, contact cards, files) that save a copy first and can be undone, so a bad write never loses what was there.
 
@@ -177,6 +178,7 @@ And the first bundled plugin, **`nextcloud`**: DAV writes (calendar events, cont
 - **Plan first, apply what was reviewed, undo anything.** A plan is stored before anything runs, and `apply` refuses if the files changed since. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Built for agents.** Every command takes `--json` (`{ok, command, data}`), exit codes are typed, `--dry-run` and `--limit` keep changes and output bounded, and no MCP server is needed. See [docs/CLI.md](docs/CLI.md).
 - **Scripts with a nudge.** A one-off fix is one decorated function that gets plan, apply, undo and audit for free, and carries four short hints (`when`, `before`, `after`, `avoid`) that tell an agent when to use it and what to check. `homelab scripts` finds one, `homelab script-new` writes the next.
+- **Autonomy you control.** Per-script levels (`deny`, `plan`, `ask`, `auto`), a pause-all switch, named inventory targets, a hash-chained audit log you can verify, and snapshot reports that say what changed. Try it safely with `homelab demo`.
 - **Plugins.** A plugin declares what it may touch, and the engine refuses anything else. General plugins are bundled; your own live in the gitignored `custom/` folder, one folder each, with the same contract. Three YAML files configure everything.
 - **Secrets without leaks.** Use [UnENVerse](https://github.com/darthdemono/UnENVerse) (recommended, see [docs/UNV.md](docs/UNV.md)) or a mode-600 `.env` fallback (see [.env.example](.env.example)). Values are never printed, logged or stored; plans carry placeholders.
 - **A public repo that works with your private files.** `AGENTS.md` is generic and tells a model to read `Agents/Index.md` if it exists. That folder, `custom/`, `state/`, `config/*.yaml`, `Handoff/` and `Research/` are gitignored, and a leak audit runs before every push. See [docs/PUBLISHING.md](docs/PUBLISHING.md).
