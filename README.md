@@ -94,8 +94,11 @@ uv run homelab undo latest --yes
 | `docker_ps` | list containers with state, status and image (read only) |
 | `compose_restart` | restart some or all services of a Docker Compose file |
 | `compose_update` | `docker compose pull`, then `up -d` |
+| `import_repo_history` | bring an old repo's full history and notes in, locally only, when a tool is merged into this project |
 
-**Docker ecosystem.** Any stack that runs under the `docker` CLI with Compose v2 works now through those three scripts. Application-aware plugins are on the roadmap, not shipped: Jellyfin library naming and verification, Sonarr, Radarr, Prowlarr and Bazarr fixes, qBittorrent behind a VPN container with port forwarding and cross-seed, Navidrome music-library cleanup, Immich and Nextcloud through their APIs, and monitoring collectors. [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) lists each with its status. For anything else, describe the job to your agent and it writes the script with `homelab script-new`.
+And the first bundled plugin, **`nextcloud`**: DAV writes (calendar events, contact cards, files) that save a copy first and can be undone, so a bad write never loses what was there.
+
+**Docker ecosystem.** Any stack that runs under the `docker` CLI with Compose v2 works now through those three scripts. Application-aware plugins are on the roadmap, not shipped: Jellyfin library naming and verification, Sonarr, Radarr, Prowlarr and Bazarr fixes, qBittorrent behind a VPN container with port forwarding and cross-seed, Navidrome music-library cleanup, Immich through its API, and monitoring collectors. [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) lists each with its status. For anything else, describe the job to your agent and it writes the script with `homelab script-new`.
 
 ## What you get
 
