@@ -15,6 +15,14 @@ ROOT = Path(__file__).resolve().parent.parent
 
 FAKE_DOCKER = """#!/bin/sh
 echo "$@" >> "$FAKE_DOCKER_LOG"
+STATE="$FAKE_DOCKER_LOG.id"
+[ -f "$STATE" ] || echo "sha256:old" > "$STATE"
+case "$*" in
+  *"config --images"*) echo "app/image:1" ;;
+  "image inspect"*) cat "$STATE" ;;
+  *" pull"*) echo "sha256:new" > "$STATE" ;;
+  "tag "*) echo "$2" > "$STATE" ;;
+esac
 if [ "$1" = "ps" ]; then
   echo '{"Names":"jellyfin","State":"running","Status":"Up 2 days (healthy)","Image":"jellyfin/jellyfin:10"}'
   echo '{"Names":"sonarr","State":"exited","Status":"Exited (1) 3 hours ago","Image":"linuxserver/sonarr"}'
@@ -97,14 +105,32 @@ def test_compose_restart_plans_then_runs_exactly_that(dk, capsys):
     assert "docker_ps" in out(capsys)["data"]["nudge"]["after"]
 
 
-def test_compose_update_pulls_then_recreates(dk, capsys):
+def test_compose_update_pulls_recreates_and_undo_returns_to_the_old_image(dk, capsys):
     tmp, cfg = dk
     file = str(tmp / "docker-compose.yml")
-    run(cfg, "plan", "compose_update", "--set", f"file={file}", "--json")
-    steps = [a["args"]["argv"][3:] for a in out(capsys)["data"]["plan"]["actions"]]
-    assert steps == [[file, "pull"], [file, "up", "-d"]] or [s[1:] for s in steps] == [["pull"], ["up", "-d"]]
-    run(cfg, "apply", "latest", "--yes")
-    assert (tmp / "docker.log").read_text().splitlines() == [f"compose -f {file} pull", f"compose -f {file} up -d"]
+    assert run(cfg, "plan", "compose_update", "--set", f"file={file}", "--json") == 0
+    data = out(capsys)["data"]
+    assert data["plan"]["actions"][0]["kind"] == "plugin" and "image tags" in data["nudge"]["before"]
+    assert not (tmp / "docker.log").exists()
+    assert run(cfg, "apply", "latest", "--yes") == 0
+    log = (tmp / "docker.log").read_text().splitlines()
+    assert f"compose -f {file} pull" in log and f"compose -f {file} up -d" in log
+    assert (tmp / "docker.log.id").read_text().strip() == "sha256:new"
+    assert run(cfg, "undo", "latest", "--yes") == 0
+    assert (tmp / "docker.log.id").read_text().strip() == "sha256:old"
+    assert (tmp / "docker.log").read_text().splitlines()[-1] == f"compose -f {file} up -d"
+
+
+def test_stacks_are_chosen_by_name_from_the_inventory(dk, capsys):
+    tmp, cfg = dk
+    base = yaml.safe_load((cfg / "homelab.yaml").read_text())
+    base["inventory"] = {"stacks": {"media": str(tmp / "docker-compose.yml")}}
+    (cfg / "homelab.yaml").write_text(yaml.dump(base))
+    assert run(cfg, "plan", "compose_restart", "--set", "stack=media", "--json") == 0
+    argv = out(capsys)["data"]["plan"]["actions"][0]["args"]["argv"]
+    assert argv[:4] == ["docker", "compose", "-f", str(tmp / "docker-compose.yml")]
+    run(cfg, "plan", "compose_restart", "--set", "stack=nope", "--json")
+    assert "set file=PATH or stack=NAME" in out(capsys)["data"]["plan"]["notes"][0]
 
 
 def test_a_missing_compose_file_is_a_note_not_an_action(dk, capsys):
