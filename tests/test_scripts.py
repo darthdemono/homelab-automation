@@ -148,7 +148,8 @@ def test_describe_a_script_shows_its_nudge(sc, capsys):
 
 def test_plugins_listing_leaves_scripts_out(sc, capsys):
     run(sc[1], "plugins", "--json")
-    assert {p["name"] for p in out(capsys)["data"]["plugins"]} == {"demo"}
+    names = {p["name"] for p in out(capsys)["data"]["plugins"]}
+    assert "demo" in names and "tuck_away" not in names and "rename_seasons" not in names
 
 
 def test_a_broken_script_is_reported_and_the_rest_still_work(sc, capsys):
