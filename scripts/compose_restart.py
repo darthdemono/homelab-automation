@@ -10,7 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 class Options(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    file: str
+    file: str = ""
+    stack: str = ""  # a name from `inventory: stacks:` in homelab.yaml, instead of a path
     services: list[str] = []
 
 
@@ -29,9 +30,12 @@ class Options(BaseModel):
     ),
 )
 def compose_restart(ctx, options: Options) -> Plan:
-    if not Path(options.file).expanduser().is_file():
-        return Plan(notes=[f"compose file not found: {options.file}"])
-    argv = ["docker", "compose", "-f", options.file, "restart", *options.services]
+    file = (ctx.named("stacks", options.stack) if options.stack else options.file) or ""
+    if not file:
+        return Plan(notes=["set file=PATH or stack=NAME (a name from inventory: stacks:)"])
+    if not Path(file).expanduser().is_file():
+        return Plan(notes=[f"compose file not found: {file}"])
+    argv = ["docker", "compose", "-f", file, "restart", *options.services]
     return Plan(
         actions=[Action(kind="exec", describe=" ".join(argv), args={"argv": argv})],
         notes=["a restart cannot be undone"],
