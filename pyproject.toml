@@ -1,0 +1,45 @@
+[project]
+name = "homelab-automation"
+version = "0.1.0"
+description = "A small plugin engine for homelab automation: plan first, apply what was reviewed, undo anything."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Jubair Hasan (DarthDemono)" }]
+requires-python = ">=3.13"
+dependencies = ["pydantic>=2.13", "pyyaml>=6", "homelab-plugin-api"]
+
+[tool.uv.sources]
+homelab-plugin-api = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*", "plugins/*"]
+
+[project.scripts]
+homelab = "homelab.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pytest>=9", "pytest-cov>=6", "ruff>=0.15", "hypothesis>=6"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv.build-backend]
+module-name = "homelab"
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = ["custom"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S603", "S607", "E501"]
+"fuzz/*" = ["S101"]
+"src/homelab/runner.py" = ["S603"]
