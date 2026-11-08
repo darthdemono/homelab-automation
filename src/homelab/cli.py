@@ -104,7 +104,22 @@ COMMANDS: dict[str, tuple[str, list]] = {
             (("--limit",), {"type": int, "default": 5, "help": "show at most N entries, 0 for all"}),
         ],
     ),
-    "apply": ("apply a reviewed run", [(("target",), {"help": "run id, unique prefix or latest"}), YES, DRY]),
+    "apply": (
+        "apply a reviewed run",
+        [
+            (("target",), {"help": "run id, unique prefix or latest"}),
+            YES,
+            DRY,
+            (
+                ("--detach",),
+                {"action": "store_true", "help": "run in the background; follow it with `show`, stop it with `cancel`"},
+            ),
+        ],
+    ),
+    "cancel": (
+        "stop a running (detached) run; what it already did can be undone",
+        [(("target",), {"help": "run id, unique prefix or latest"})],
+    ),
     "undo": ("undo an applied run", [(("target",), {"help": "run id, unique prefix or latest"}), YES, DRY]),
     "show": ("show one run", [(("target",), {"help": "run id, unique prefix or latest"}), LIMIT]),
     "runs": ("list the ledger, newest last", [LIMIT]),
@@ -548,7 +563,9 @@ class App:
         return Result("plan", data, text)
 
     def cmd_show(self) -> Result:
-        record = self.view(self.runner.get(self.args.target), self.args.limit)
+        found = self.runner.get(self.args.target)
+        self.runner.alive(found)
+        record = self.view(found, self.args.limit)
         return Result("show", record, self.lines(record))
 
     def cmd_runs(self) -> Result:
@@ -568,6 +585,8 @@ class App:
                 "apply", self.view(record, 20), ["would apply:", *self.lines(self.view(record, 20))], dry_run=True
             )
         self.confirm(f"Apply {len(record['plan']['actions'])} actions of run {record['id']}?")
+        if self.args.detach:
+            return self.detach(record)
         self.load_secrets([record["ref"].partition(".")[0]])
         done = self.runner.apply(record["id"])
         data = self.view(done, 20)
@@ -577,6 +596,41 @@ class App:
             data["nudge"] = hints
             text.append(f"after: {hints['after']}")
         return Result("apply", data, text)
+
+    def detach(self, record: dict) -> Result:
+        """Start the apply as its own process, so a long run outlives this command and can be followed."""
+        import subprocess
+
+        self.runner.check_apply(record["id"])  # refuse now, not silently in the background
+        log = self.config.state_dir / "runs" / f"{record['id']}.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        argv = [sys.executable, "-m", "homelab.cli", "--config", str(self.directory), "apply", record["id"], "--yes"]
+        with log.open("w") as handle:
+            proc = subprocess.Popen(argv, stdout=handle, stderr=handle, start_new_session=True)  # noqa: S603
+        self.runner.audit("detach", run=record["id"], ref=record["ref"], pid=proc.pid)
+        data = {
+            "run": record["id"],
+            "detached": True,
+            "pid": proc.pid,
+            "log": str(log),
+            "follow": f"homelab show {record['id']}",
+            "stop": f"homelab cancel {record['id']}",
+        }
+        return Result(
+            "apply",
+            data,
+            [
+                f"started run {record['id']} in the background (pid {proc.pid}); follow: homelab show {record['id']}, stop: homelab cancel {record['id']}"
+            ],
+        )
+
+    def cmd_cancel(self) -> Result:
+        done = self.runner.cancel(self.args.target)
+        return Result(
+            "cancel",
+            {"run": done["id"], "status": done["status"]},
+            [f"run {done['id']} cancelled; `homelab undo {done['id']} --yes` restores what it already did"],
+        )
 
     def cmd_undo(self) -> Result:
         record = self.runner.get(self.args.target)
