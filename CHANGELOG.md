@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **jellyFix tools ported.** The 31 scripts of the standalone tool are jobs of four plugins: `jellyfix` (library maintenance), `arr` (Sonarr, Radarr, Prowlarr, Jackett), `qbittorrent` and `jellyfin`. They keep their logic and their own journals; planning shows the dry run, applying runs it, undo runs the script's `--undo`. Library folders, service URLs, quarantine and container paths are options (see `homelab_jellyfix.stack`). New: `stale_series`. Plugin READMEs list every job (`tools/gen_plugin_readmes.py`).
 - **`docs/PLUGIN_REPOS.md`:** how a tool can be a public project of its own and a plugin at once (entry point plus an optional extra), with a music-tagging tool as the example.
 - **`qbittorrent_pause`:** pauses the running torrents (all, or by name), and `undo` resumes exactly those. Uses `stop` and `start` on qBittorrent 5 and falls back to `pause` and `resume` on older versions.
 - **Bundled scripts ship in the wheel.** They moved to `src/homelab/scripts/` and `scripts_dir` defaults to that folder, so a pip install has every bundled script. Tests pin `scripts_dir: scripts` in their own temp config.

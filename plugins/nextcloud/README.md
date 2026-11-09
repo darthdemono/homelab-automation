@@ -30,3 +30,12 @@ homelab undo latest --yes               # restores the previous copy, or removes
 ```
 
 Saved copies live in `state/plugins/nextcloud/` (gitignored). Why not SQL: a card or event row is not self-contained in Nextcloud, and writing the database directly leaves the search index and the sync journal stale, so synced phones never see the change. DAV is the supported write path.
+
+## Jobs (2)
+
+<!-- jobs:begin -->
+| Job | What it does |
+| --- | --- |
+| `delete` | Remove a resource after saving a copy |
+| `put` | Upload a local file to a server path, replacing what is there |
+<!-- jobs:end -->

@@ -314,13 +314,13 @@ version = "0.1.0"
 source = { editable = "plugins/arr" }
 dependencies = [
     { name = "homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix", editable = "plugins/jellyfix" },
 ]
 
 [[package]]
@@ -329,13 +329,13 @@ version = "0.1.0"
 source = { editable = "plugins/jellyfin" }
 dependencies = [
     { name = "homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix", editable = "plugins/jellyfix" },
 ]
 
 [[package]]
@@ -387,13 +387,13 @@ version = "0.1.0"
 source = { editable = "plugins/qbittorrent" }
 dependencies = [
     { name = "homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
-    { name = "requests" },
+    { name = "homelab-plugin-jellyfix", editable = "plugins/jellyfix" },
 ]
 
 [[package]]

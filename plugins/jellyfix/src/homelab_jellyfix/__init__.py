@@ -10,12 +10,15 @@ folders that only hold regenerable Jellyfin metadata are quarantined by the `pru
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from homelab_plugin_api import Action, Job, Manifest, Permissions, Plan, Plugin
 from pydantic import BaseModel, ConfigDict
 
 from . import media, planner, providers
+from .jobs_ops import JOBS as OPS_JOBS
+from .stale_series import plan_stale_series
 
 SIDECAR_EXT = {".srt", ".ass", ".ssa", ".sub", ".idx", ".vtt", ".sup"}
 REGENERABLE = {".nfo", ".jpg", ".jpeg", ".png", ".xml", ".webp", ".nfo-orig", ".ini", ".bif", ".srt.bak"}
@@ -32,9 +35,11 @@ class Library(BaseModel):
 
 
 class Options(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")  # stack settings (root, urls, quarantine, ...) are read by the scripts
     libraries: list[Library] = []
     library: str = "all"
+    args: list[str] = []  # extra flags for a maintenance script, for example ["--limit", "5"]
+    lines: int = 60
 
 
 def chosen(options: Options) -> list[Library]:
@@ -184,7 +189,7 @@ PLUGIN = Plugin(
             reads=["{media}", "{state}"],
             writes=["{media}", "{state}"],
             network=["api4.thetvdb.com", "api.themoviedb.org"],
-            exec=["ffprobe"],
+            exec=[sys.executable, "ffprobe", "docker", "unrar"],
         ),
         secrets=SECRETS,
     ),
@@ -197,6 +202,11 @@ PLUGIN = Plugin(
         "prune": Job(
             "Quarantine folders that hold no video and only regenerable metadata (run after rename)", plan_prune
         ),
+        "stale_series": Job(
+            "Report series shown twice because an old folder sits beside the renamed one; quarantine its leftovers",
+            plan_stale_series,
+        ),
+        **OPS_JOBS,
     },
     example={"libraries": [{"name": "Shows", "path": "/mnt/media/Shows", "kind": "series"}]},
 )
