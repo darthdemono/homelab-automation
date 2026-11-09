@@ -32,3 +32,5 @@ Plugins in other repositories are found the same way as the bundled ones. Secret
 - Read-only jobs run the command at plan time and show the output as notes. Jobs that change something are one `exec` action, run only by `homelab apply`. Put the risky ones at `ask` in `policy`.
 - If the tool uses a different Python environment, set an environment variable such as `MYTOOL_PYTHON` so the plugin runs that interpreter.
 - Keep personal data out of the plugin repository: working data, vault entry ids and local paths belong in ignored files or in your homelab config.
+
+The plugin repository can stay private or go public: nothing in it needs homelab-automation to run.
