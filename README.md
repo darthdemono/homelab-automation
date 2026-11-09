@@ -194,6 +194,7 @@ And the first bundled plugin, **`nextcloud`**: DAV writes (calendar events, cont
 | [docs/UNV.md](docs/UNV.md) | Secrets with UnENVerse, and the `.env` fallback |
 | [docs/SECRETS.md](docs/SECRETS.md) | The engine side of secrets |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Pipeline, invariants and decisions |
+| [docs/guides/](docs/guides/README.md) | Troubleshooting guides for recurring homelab problems, indexed by symptom |
 | [THREAT_MODEL.md](THREAT_MODEL.md), [SECURITY.md](SECURITY.md) | What is defended, and how to report a problem |
 | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) | Working on the repo, as a person or an agent |
 
