@@ -48,7 +48,10 @@ DEFAULT_DB = os.environ.get("NAVIDROME_DB", "navidrome.db")
 # --------------------------------------------------------------------------
 def auth_params(user, password, client):
     salt = "".join(random.choices(string.ascii_letters + string.digits, k=12))
-    token = hashlib.md5((password + salt).encode("utf-8")).hexdigest()
+    # The Subsonic API defines its login token as md5(password + salt); it is a protocol requirement, not storage.
+    token = hashlib.md5(
+        (password + salt).encode("utf-8"), usedforsecurity=False
+    ).hexdigest()  # codeql[py/weak-sensitive-data-hashing]
     return {"u": user, "t": token, "s": salt, "v": "1.16.1", "c": client, "f": "json"}
 
 
