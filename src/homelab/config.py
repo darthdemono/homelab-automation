@@ -48,7 +48,7 @@ class Core(BaseModel):
     secrets: Secrets = Secrets()
     state_dir: str = "state"
     custom_dir: str = "custom"
-    scripts_dir: str = str(Path(__file__).parent / "scripts")  # inside the package, so a pip install has them
+    scripts_dir: str = ""  # empty means the scripts bundled inside the package, so a pip install has them
     paths: dict[str, str] = {}
     schedule_wrapper: list[str] = []
     policy: Policy = Policy()
@@ -117,7 +117,8 @@ class Config:
     @property
     def script_dirs(self) -> list[Path]:
         """Bundled scripts, then the private ones in custom/scripts."""
-        return [self.resolve(self.core.scripts_dir), self.custom_dir / "scripts"]
+        bundled = self.resolve(self.core.scripts_dir) if self.core.scripts_dir else Path(__file__).parent / "scripts"
+        return [bundled, self.custom_dir / "scripts"]
 
     @property
     def paths(self) -> dict[str, Path]:

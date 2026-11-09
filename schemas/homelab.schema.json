@@ -119,7 +119,7 @@
       "type": "string"
     },
     "scripts_dir": {
-      "default": "scripts",
+      "default": "",
       "title": "Scripts Dir",
       "type": "string"
     },
