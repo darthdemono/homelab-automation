@@ -1,0 +1,37 @@
+# GPU-accelerated Essentia toolchain (RTX 2060, driver 595.84).
+#
+# essentia-tensorflow bundles libtensorflow 2.5.0, which is a GPU build: given
+# the CUDA 11.x runtime + cuDNN 8 it offloads all model-zoo inference (the 2
+# embeddings + 21 classifier heads) to the GPU. The nvidia-container-toolkit
+# passes the driver (libcuda) in; the CUDA *runtime* libraries are supplied here
+# as pip wheels so no CUDA toolkit install is needed and the base image stays
+# python:3.11 (essentia has no wheels past cp311).
+#
+# TF 2.5 wants CUDA 11.2 + cuDNN 8.1; the cu11 wheels' sonames
+# (libcudart.so.11.0, libcudnn.so.8, libcublas.so.11, ...) satisfy its dlopen.
+FROM python:3.11-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir "numpy<2" essentia-tensorflow \
+    && pip install --no-cache-dir \
+       nvidia-cuda-runtime-cu11 \
+       nvidia-cudnn-cu11==8.9.6.50 \
+       nvidia-cublas-cu11 \
+       nvidia-cufft-cu11 \
+       nvidia-curand-cu11 \
+       nvidia-cusolver-cu11 \
+       nvidia-cusparse-cu11
+
+# Point the dynamic loader at the CUDA runtime libs the wheels dropped in.
+ENV NV=/usr/local/lib/python3.11/site-packages/nvidia
+ENV LD_LIBRARY_PATH=$NV/cuda_runtime/lib:$NV/cudnn/lib:$NV/cublas/lib:$NV/cufft/lib:$NV/curand/lib:$NV/cusolver/lib:$NV/cusparse/lib
+# Let TF grow GPU memory instead of grabbing all 6 GB up front.
+ENV TF_FORCE_GPU_ALLOW_GROWTH=true
+
+WORKDIR /work
+COPY extract.py models.json /opt/musicfix-essentia/
+ENV MUSICFIX_MODELS=/models
+ENTRYPOINT ["python", "/opt/musicfix-essentia/extract.py"]
