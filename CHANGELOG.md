@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **`jellyfix` plugin:** the jellyFix tool as a bundled plugin (jobs `rename`, `verify`, `prune`); renames are engine moves, so they are reviewed, journalled and reversible, and subtitles follow their video. A plugin that raises `ValueError` while planning now gives an `invalid` error (exit 10).
 
 - **Autonomy and inventory.** `policy` levels (deny, plan, ask, auto) with glob rules, `homelab policy`, `homelab pause` and `resume`, scheduled pipelines apply only `auto` steps (`HOMELAB_SCHEDULED`), `inventory` names for stacks (`stack=NAME` instead of a path). Plugin API 1.3.0: `ctx.named()`, and `apply_action` and `undo_action` on `@script`.
 - **Tamper-evident audit.** Hash-chained `audit.jsonl`, `homelab audit` and `homelab audit --verify`, and `docs/VERIFY.md`.

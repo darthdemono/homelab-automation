@@ -263,7 +263,10 @@ class Runner:
             close = [f"{name}.{j}" for j in difflib.get_close_matches(job_name, list(plugin.jobs), 3)]
             raise NotFound(f"plugin {name!r} has no job {job_name!r}", {"suggestions": close} if close else None)
         ctx = self.context(name)
-        plan = plugin.jobs[job_name].plan(ctx, self.options(name, overrides))
+        try:
+            plan = plugin.jobs[job_name].plan(ctx, self.options(name, overrides))
+        except ValueError as err:  # a plugin saying "these options make no sense" is the caller's mistake
+            raise Invalid(str(err)) from err
         plan.job = ref
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:

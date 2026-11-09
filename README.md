@@ -53,7 +53,7 @@ Every command also speaks JSON (`--json` answers `{ok, command, data}`), uses ty
 - **The engine** (`homelab`): configuration from three YAML files, plugin and script discovery, the planner, the ledger, apply and undo, the scheduler that renders systemd timers, the secrets layer and the CLI contract.
 - **The plugin contract** (`homelab-plugin-api`): a small, versioned package that depends only on pydantic. A plugin declares a manifest with permissions, options and jobs that return plans.
 - **Scripts**: one decorated function each, with a nudge. This is where one-off fixes live. They get plan, apply, undo, audit and secrets from the engine for free.
-- **Bundled plugins**: general tools shipped in this repository. The first is `nextcloud`, DAV writes for calendars, contacts and files that save a copy before they change anything.
+- **Bundled plugins**: general tools shipped in this repository. `nextcloud` writes calendars, contacts and files over DAV and saves a copy first; `jellyfix` renames and verifies Jellyfin libraries against TVDB and TMDB with TRaSH naming, every move reversible.
 - **Your private layer**: plugins and scripts in a gitignored `custom/` folder, personal instructions in a gitignored `Agents/` folder, your real config and state. The public repository never contains them, and a leak audit runs before every push.
 
 ## Who it is for
@@ -74,7 +74,7 @@ Every command also speaks JSON (`--json` answers `{ok, command, data}`), uses ty
 
 ## Status
 
-Pre-1.0. The engine, the CLI contract, the scripts system, the secrets layer, the leak audit, the `nextcloud` plugin and the Docker scripts ship today, with a test suite and checks on every pull request. Application plugins for Jellyfin, the Sonarr family, qBittorrent behind a VPN container, Navidrome and monitoring are on the roadmap, as is a data layer for read-only collectors. [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) lists each item with its status.
+Pre-1.0. The engine, the CLI contract, the scripts system, the secrets layer, the leak audit, the `nextcloud` and `jellyfix` plugins and the Docker scripts ship today, with a test suite and checks on every pull request. Application plugins for the Sonarr family, qBittorrent behind a VPN container, Navidrome and monitoring are on the roadmap, as is a data layer for read-only collectors. [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md) lists each item with its status.
 
 ## The ecosystem
 
