@@ -118,7 +118,10 @@ class Runner:
     def _save(self, record: dict) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
         text = scrub(json.dumps(record, indent=2), self._secret_values(record["ref"].partition(".")[0]))
-        (self.runs_dir / f"{record['id']}.json").write_text(text)
+        target = self.runs_dir / f"{record['id']}.json"
+        part = target.with_name(target.name + ".part")
+        part.write_text(text)
+        part.replace(target)
         record.clear()
         record.update(json.loads(text))  # callers see the scrubbed record, never the secret
 
