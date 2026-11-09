@@ -216,7 +216,9 @@ def test_the_bundled_junk_script_quarantines_exact_names_only(env, capsys):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(__import__("pathlib").Path(__file__).resolve().parent.parent / "scripts"),
+                "scripts_dir": str(
+                    __import__("pathlib").Path(__file__).resolve().parent.parent / "src" / "homelab" / "scripts"
+                ),
                 "paths": {"lib": str(tmp / "lib"), "media": str(tmp / "lib")},
             }
         )

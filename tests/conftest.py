@@ -81,6 +81,7 @@ def env(tmp_path):
             {
                 "state_dir": str(tmp_path / "state"),
                 "custom_dir": str(tmp_path / "custom"),
+                "scripts_dir": "scripts",
                 "paths": {"lib": str(tmp_path / "lib")},
             }
         )

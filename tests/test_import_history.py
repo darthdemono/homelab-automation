@@ -40,7 +40,7 @@ def test_the_history_and_notes_of_an_old_repo_come_in_locally(env, capsys):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(ROOT / "scripts"),
+                "scripts_dir": str(ROOT / "src" / "homelab" / "scripts"),
                 "paths": {"lib": str(tmp / "lib"), "project": str(project), "agents": str(agents)},
             }
         )
@@ -67,7 +67,7 @@ def test_a_non_repository_is_a_note_not_an_action(env, capsys):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(ROOT / "scripts"),
+                "scripts_dir": str(ROOT / "src" / "homelab" / "scripts"),
                 "paths": {"lib": str(tmp / "lib"), "project": str(tmp), "agents": str(tmp / "agents")},
             }
         )

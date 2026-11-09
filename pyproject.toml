@@ -46,7 +46,7 @@ select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 "fuzz/*" = ["S101"]
 "tools/*" = ["S603", "S607"]
 # scripts run external programs (docker, ffprobe) by design; the engine checks each exec against the manifest
-"scripts/*" = ["S603", "S607"]
+"src/homelab/scripts/*" = ["S603", "S607"]
 "src/homelab/runner.py" = ["S603"]
 "src/homelab/report.py" = ["S603", "S607"]
 "src/homelab/cli.py" = ["E501"]

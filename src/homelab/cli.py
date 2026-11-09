@@ -516,9 +516,9 @@ class App:
             from .errors import Conflict
 
             raise Conflict(f"{folder} already exists; pick another --dir")
-        scripts = Path(__file__).resolve().parent.parent.parent / "scripts"
+        scripts = Path(__file__).resolve().parent / "scripts"
         if not scripts.is_dir():
-            raise Invalid("the bundled scripts folder was not found; run the demo from a clone of the repository")
+            raise Invalid("the bundled scripts folder was not found; reinstall homelab-automation")
         (folder / "config").mkdir(parents=True)
         (folder / "media" / "Music" / "Album").mkdir(parents=True)
         for name in ("Thumbs.db", "Music/Album/desktop.ini", "Music/Album/01-track.flac", "Music/Album/.DS_Store"):
