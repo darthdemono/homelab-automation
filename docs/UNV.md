@@ -36,7 +36,7 @@ so the values exist only inside that process. `homelab secrets` shows where each
    secrets:
      provider: auto            # auto | unv | dotenv | env
      project: homelab          # optional: load a whole unv project instead of single entries
-     entries:                  # ENV_VAR -> unv entry, or entry:field for one field of an entry
+     entries:                  # ENV_VAR -> unv entry, or entry:field for one field (use entry#field when the entry name holds a colon)
        JELLYFIN_API_KEY: jellyfin
        SITE_EMAIL: mysite:email
    ```

@@ -66,7 +66,8 @@ def unv_args(config: Config, names: list[str]) -> list[str]:
     for name in names:
         entry = config.core.secrets.entries.get(name)
         if entry:
-            provider, _, field = entry.partition(":")  # "provider" or "provider:field"
+            # "provider", "provider:field", or "provider#field" when the provider name itself holds a colon
+            provider, _, field = entry.partition("#" if "#" in entry else ":")
             args += ["--entry", f"{provider}={name}" + (f":{field}" if field else "")]
         else:
             args += ["--entry", name]
