@@ -20,6 +20,7 @@ PLUGIN = textwrap.dedent(
         model_config = ConfigDict(extra="forbid")
         count: int = 3
         outside: bool = False
+        chain: bool = False
 
 
     def shuffle(ctx, options):
@@ -27,6 +28,10 @@ PLUGIN = textwrap.dedent(
         moves = [(str(lib / f"f{i}.txt"), str(lib / "out" / f"f{i}.txt")) for i in range(options.count)]
         if options.outside:
             moves.append((str(lib / "f0.txt"), "/tmp/outside.txt"))
+        if options.chain:  # stage, then commit: the second step moves what the first one produced
+            staged = [(src, str(lib / "stage" / f"f{i}.txt")) for i, (src, _) in enumerate(moves)]
+            final = [(dst, str(lib / "out" / f"f{i}.txt")) for i, (_, dst) in enumerate(staged)]
+            return Plan(actions=[journal_action(ctx, staged, "stage"), journal_action(ctx, final, "commit")])
         return Plan(actions=[journal_action(ctx, moves, "shuffle")])
 
 
@@ -110,5 +115,14 @@ def test_a_run_that_dies_half_way_can_still_be_undone(setup):
         runner.shutil.move = real
     record = json.loads(next((tmp / "state" / "runs").glob("*.json")).read_text())
     assert record["status"] == "failed"
+    assert run(cfg, "undo", "latest", "--yes") == 0
+    assert sorted(p.name for p in lib.glob("f*.txt")) == ["f0.txt", "f1.txt", "f2.txt"]
+
+
+def test_a_second_step_may_move_what_the_first_produced(setup):
+    tmp, cfg, lib = setup
+    assert run(cfg, "plan", "jplug.shuffle", "--set", "chain=true") == 0
+    assert run(cfg, "apply", "latest", "--yes") == 0
+    assert sorted(p.name for p in (lib / "out").iterdir()) == ["f0.txt", "f1.txt", "f2.txt"]
     assert run(cfg, "undo", "latest", "--yes") == 0
     assert sorted(p.name for p in lib.glob("f*.txt")) == ["f0.txt", "f1.txt", "f2.txt"]

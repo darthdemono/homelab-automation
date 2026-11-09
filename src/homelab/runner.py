@@ -315,15 +315,25 @@ class Runner:
         problems = check_permissions(plugin.manifest, ctx, plan)
         if problems:
             raise Denied("plan refused:\n  " + "\n  ".join(problems), {"problems": problems})
+        made: set[str] = set()
+        gone: set[str] = set()
         for action in plan.actions:
             if action.kind == "move":
                 src, dst = Path(action.args["src"]), Path(action.args["dst"])
                 if not src.exists() or dst.exists():
                     raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
             elif action.kind == "journal":
+                # a later step may move what an earlier one produced (stage, then commit), so track both
                 for move in _moves(action.args["path"]):
-                    if not Path(move["src"]).exists() or Path(move["dst"]).exists():
-                        raise Conflict(f"changed since the plan, nothing applied: {move['src']} -> {move['dst']}")
+                    src, dst = move["src"], move["dst"]
+                    has_src = src in made or (src not in gone and Path(src).exists())
+                    dst_taken = dst in made or (dst not in gone and Path(dst).exists())
+                    if not has_src or dst_taken:
+                        raise Conflict(f"changed since the plan, nothing applied: {src} -> {dst}")
+                    made.discard(src)
+                    gone.add(src)
+                    gone.discard(dst)
+                    made.add(dst)
             elif action.kind == "quarantine" and not Path(action.args["path"]).exists():
                 raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
         return record, plugin, ctx, options, plan
@@ -445,13 +455,23 @@ class Runner:
             raise Conflict(f"run {record['id']} is {record['status']}, nothing to undo")
         plugin = self.enabled(record["ref"].partition(".")[0])
         steps = list(reversed(record["undo"]))
+        made: set[str] = set()
+        gone: set[str] = set()
         for step in steps:
             if step["kind"] == "move" and (not Path(step["src"]).exists() or Path(step["dst"]).exists()):
                 raise Conflict(f"changed since the run, nothing undone: {step['src']} -> {step['dst']}")
             if step["kind"] == "journal":
-                for move in _moves(step["path"]) if Path(step["path"]).exists() else []:
-                    if not Path(move["dst"]).exists() or Path(move["src"]).exists():
-                        raise Conflict(f"changed since the run, nothing undone: {move['dst']} -> {move['src']}")
+                # going backwards, so a file put back by one step may be moved on by the next
+                for move in reversed(list(_moves(step["path"])) if Path(step["path"]).exists() else []):
+                    src, dst = move["dst"], move["src"]
+                    has_src = src in made or (src not in gone and Path(src).exists())
+                    dst_taken = dst in made or (dst not in gone and Path(dst).exists())
+                    if not has_src or dst_taken:
+                        raise Conflict(f"changed since the run, nothing undone: {src} -> {dst}")
+                    made.discard(src)
+                    gone.add(src)
+                    gone.discard(dst)
+                    made.add(dst)
             if step["kind"] == "restore":
                 path = Path(step["path"])
                 if not path.exists() or _hash(path.read_text()) != step["wrote"]:
