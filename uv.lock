@@ -6,6 +6,7 @@ requires-python = ">=3.13"
 members = [
     "homelab-automation",
     "homelab-plugin-api",
+    "homelab-plugin-jellyfix",
     "homelab-plugin-nextcloud",
 ]
 
@@ -129,6 +130,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "homelab-plugin-api" },
+    { name = "homelab-plugin-jellyfix" },
     { name = "homelab-plugin-nextcloud" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -145,6 +147,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
+    { name = "homelab-plugin-jellyfix", editable = "plugins/jellyfix" },
     { name = "homelab-plugin-nextcloud", editable = "plugins/nextcloud" },
     { name = "pydantic", specifier = ">=2.13" },
     { name = "pyyaml", specifier = ">=6" },
@@ -168,6 +171,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.13" }]
+
+[[package]]
+name = "homelab-plugin-jellyfix"
+version = "0.1.0"
+source = { editable = "plugins/jellyfix" }
+dependencies = [
+    { name = "homelab-plugin-api" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" }]
 
 [[package]]
 name = "homelab-plugin-nextcloud"
