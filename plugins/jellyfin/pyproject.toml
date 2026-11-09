@@ -1,0 +1,23 @@
+[project]
+name = "homelab-plugin-jellyfin"
+version = "0.1.0"
+description = "Repair Jellyfin metadata, seasons and duplicate entries through its API, recording what it replaced."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Jubair Hasan (DarthDemono)" }]
+requires-python = ">=3.13"
+dependencies = ["homelab-plugin-api", "requests"]
+
+[tool.uv.sources]
+homelab-plugin-api = { workspace = true }
+
+[project.entry-points."homelab.plugins"]
+jellyfin = "homelab_jellyfin:PLUGIN"
+
+[tool.uv.build-backend]
+module-name = "homelab_jellyfin"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.14.0"]
+build-backend = "uv_build"

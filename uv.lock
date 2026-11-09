@@ -6,9 +6,12 @@ requires-python = ">=3.13"
 members = [
     "homelab-automation",
     "homelab-plugin-api",
+    "homelab-plugin-arr",
+    "homelab-plugin-jellyfin",
     "homelab-plugin-jellyfix",
     "homelab-plugin-musicfix",
     "homelab-plugin-nextcloud",
+    "homelab-plugin-qbittorrent",
 ]
 
 [[package]]
@@ -255,9 +258,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "homelab-plugin-api" },
+    { name = "homelab-plugin-arr" },
+    { name = "homelab-plugin-jellyfin" },
     { name = "homelab-plugin-jellyfix" },
     { name = "homelab-plugin-musicfix" },
     { name = "homelab-plugin-nextcloud" },
+    { name = "homelab-plugin-qbittorrent" },
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
@@ -273,9 +279,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
+    { name = "homelab-plugin-arr", editable = "plugins/arr" },
+    { name = "homelab-plugin-jellyfin", editable = "plugins/jellyfin" },
     { name = "homelab-plugin-jellyfix", editable = "plugins/jellyfix" },
     { name = "homelab-plugin-musicfix", editable = "plugins/musicfix" },
     { name = "homelab-plugin-nextcloud", editable = "plugins/nextcloud" },
+    { name = "homelab-plugin-qbittorrent", editable = "plugins/qbittorrent" },
     { name = "pydantic", specifier = ">=2.13" },
     { name = "pyyaml", specifier = ">=6" },
 ]
@@ -298,6 +307,36 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.13" }]
+
+[[package]]
+name = "homelab-plugin-arr"
+version = "0.1.0"
+source = { editable = "plugins/arr" }
+dependencies = [
+    { name = "homelab-plugin-api" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
+    { name = "requests" },
+]
+
+[[package]]
+name = "homelab-plugin-jellyfin"
+version = "0.1.0"
+source = { editable = "plugins/jellyfin" }
+dependencies = [
+    { name = "homelab-plugin-api" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
+    { name = "requests" },
+]
 
 [[package]]
 name = "homelab-plugin-jellyfix"
@@ -341,6 +380,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" }]
+
+[[package]]
+name = "homelab-plugin-qbittorrent"
+version = "0.1.0"
+source = { editable = "plugins/qbittorrent" }
+dependencies = [
+    { name = "homelab-plugin-api" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "homelab-plugin-api", editable = "packages/homelab-plugin-api" },
+    { name = "requests" },
+]
 
 [[package]]
 name = "hypothesis"
