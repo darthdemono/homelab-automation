@@ -15,7 +15,10 @@ ROOT = Path(__file__).resolve().parent.parent
 def build() -> str:
     found = discover(ROOT / "no-private-plugins", [ROOT / "src" / "homelab" / "scripts"])
     declared: dict[str, list[str]] = {}
+    bundled = {p.name for p in (ROOT / "plugins").iterdir() if p.is_dir()}
     for name, plugin in sorted(found.plugins.items()):
+        if found.origin[name] == "installed" and name not in bundled:
+            continue  # a plugin from another repository installed in this environment is not part of this repo
         for secret in plugin.manifest.secrets:
             declared.setdefault(secret, []).append(name)
     lines = [
