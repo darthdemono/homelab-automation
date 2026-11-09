@@ -359,6 +359,13 @@ def test_auto_provider_reexecutes_under_unv_with_mapped_entries(sec_env, monkeyp
     monkeypatch.delenv(sec.LOADED)
 
 
+def test_an_entry_name_with_a_colon_uses_hash_for_the_field(sec_env, monkeypatch):
+    tmp, cfg, config, found = sec_env
+    config.core.secrets.entries = {"HL_TEST_SECRET": "Svc:Admin#password", "OTHER": "svc:key"}
+    args = sec.unv_args(config, ["HL_TEST_SECRET", "OTHER"])
+    assert args[-4:] == ["--entry", "Svc:Admin=HL_TEST_SECRET:password", "--entry", "svc=OTHER:key"]
+
+
 def test_secrets_command_shows_names_and_sources_only(sec_env, capsys):
     tmp, cfg, _, _ = sec_env
     (cfg / "homelab.yaml").write_text(
