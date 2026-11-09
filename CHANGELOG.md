@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **`journal` action (plugin API 1.4.0):** one action that carries thousands of moves from a JSON-lines file (`journal_action(ctx, moves, describe)`). The engine streams it, writes each finished move to its own journal, and `undo` replays that journal backwards; a run that dies half way can still be undone. Plans are checked against the declared writes and the files, as with `move`.
 - **`jellyfix` plugin:** the jellyFix tool as a bundled plugin (jobs `rename`, `verify`, `prune`); renames are engine moves, so they are reviewed, journalled and reversible, and subtitles follow their video. A plugin that raises `ValueError` while planning now gives an `invalid` error (exit 10).
 
 - **Autonomy and inventory.** `policy` levels (deny, plan, ask, auto) with glob rules, `homelab policy`, `homelab pause` and `resume`, scheduled pipelines apply only `auto` steps (`HOMELAB_SCHEDULED`), `inventory` names for stacks (`stack=NAME` instead of a path). Plugin API 1.3.0: `ctx.named()`, and `apply_action` and `undo_action` on `@script`.

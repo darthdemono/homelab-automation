@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,7 +16,7 @@ from pydantic import BaseModel, ConfigDict
 
 API_VERSION = "1"
 
-ActionKind = Literal["move", "write", "quarantine", "exec", "plugin"]
+ActionKind = Literal["move", "write", "quarantine", "exec", "journal", "plugin"]
 
 
 class Permissions(BaseModel):
@@ -45,6 +47,9 @@ class Action(BaseModel):
     write       args: path, text
     quarantine  args: path (moved into the run's quarantine folder, never deleted)
     exec        args: argv, optional undo_argv
+    journal     args: path (a JSON-lines file of {"src", "dst"} moves), count. For thousands of moves: the engine
+                streams the file, appends each finished move to its own journal, and undo replays that journal
+                backwards. Build it with `journal_action`.
     plugin      args: anything; the plugin's apply_action and undo_action handle it
     """
 
@@ -203,4 +208,17 @@ def script_exec(
         tags=list(tags or []),
         status=status,
         nudge=nudge,
+    )
+
+
+def journal_action(ctx: Context, moves: list[tuple[str, str]], describe: str) -> Action:
+    """One action that carries many moves, written to a file under the plugin's state folder."""
+    folder = ctx.path("state") / "journal-plans"
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / f"{uuid.uuid4().hex}.jsonl"
+    with target.open("w", encoding="utf-8") as handle:
+        for src, dst in moves:
+            handle.write(json.dumps({"src": src, "dst": dst}, ensure_ascii=False) + "\n")
+    return Action(
+        kind="journal", describe=f"{describe} ({len(moves)} moves)", args={"path": str(target), "count": len(moves)}
     )

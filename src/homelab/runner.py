@@ -43,6 +43,14 @@ def _under(path: Path, prefixes: list[Path]) -> bool:
     return any(path == p or p in path.parents for p in prefixes)
 
 
+def _moves(path: str | Path):
+    """The moves in a journal file, one at a time."""
+    with Path(path).open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                yield json.loads(line)
+
+
 def check_permissions(manifest: Manifest, ctx: Context, plan: Plan) -> list[str]:
     """Return one message per action that leaves the plugin's declared permissions."""
     prefixes = []
@@ -59,6 +67,8 @@ def check_permissions(manifest: Manifest, ctx: Context, plan: Plan) -> list[str]
             targets = [action.args["src"], action.args["dst"]]
         elif action.kind in ("write", "quarantine"):
             targets = [action.args["path"]]
+        elif action.kind == "journal":
+            targets = [t for move in _moves(action.args["path"]) for t in (move["src"], move["dst"])]
         elif action.kind == "exec" and action.args["argv"][0] not in manifest.permissions.exec:
             problems.append(f"exec {action.args['argv'][0]!r} is not declared")
         for target in targets:
@@ -310,6 +320,10 @@ class Runner:
                 src, dst = Path(action.args["src"]), Path(action.args["dst"])
                 if not src.exists() or dst.exists():
                     raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
+            elif action.kind == "journal":
+                for move in _moves(action.args["path"]):
+                    if not Path(move["src"]).exists() or Path(move["dst"]).exists():
+                        raise Conflict(f"changed since the plan, nothing applied: {move['src']} -> {move['dst']}")
             elif action.kind == "quarantine" and not Path(action.args["path"]).exists():
                 raise Conflict(f"changed since the plan, nothing applied: {action.describe}")
         return record, plugin, ctx, options, plan
@@ -352,7 +366,14 @@ class Runner:
         self._save(record)
         try:
             for number, action in enumerate(plan.actions):
-                record["undo"].append(self._do(record["id"], number, action, plugin, ctx, options))
+                if action.kind == "journal":
+                    # the undo step goes in first, so a run that dies half way can still be undone
+                    journal = self.runs_dir / f"{run_id}-{number}.journal.jsonl"
+                    record["undo"].append({"kind": "journal", "path": str(journal), "describe": action.describe})
+                    self._save(record)
+                    self._run_journal(action.args["path"], journal)
+                else:
+                    record["undo"].append(self._do(record["id"], number, action, plugin, ctx, options))
                 self._save(record)
         except Exception as err:
             record["status"], record["error"] = "failed", f"{type(err).__name__}: {err}"
@@ -363,6 +384,15 @@ class Runner:
         self._save(record)
         self.audit("apply", run=run_id, ref=record["ref"], result="applied", actions=len(plan.actions))
         return record
+
+    def _run_journal(self, plan_path: str, journal: Path) -> None:
+        """Do each move in the file and write it to the journal only once it has happened."""
+        with journal.open("a", encoding="utf-8") as done:
+            for move in _moves(plan_path):
+                Path(move["dst"]).parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(move["src"], move["dst"])
+                done.write(json.dumps(move, ensure_ascii=False) + "\n")
+                done.flush()
 
     def _expand(self, value):
         """Fill `{{secret:NAME}}` placeholders from the environment, at apply time only."""
@@ -418,6 +448,10 @@ class Runner:
         for step in steps:
             if step["kind"] == "move" and (not Path(step["src"]).exists() or Path(step["dst"]).exists()):
                 raise Conflict(f"changed since the run, nothing undone: {step['src']} -> {step['dst']}")
+            if step["kind"] == "journal":
+                for move in _moves(step["path"]) if Path(step["path"]).exists() else []:
+                    if not Path(move["dst"]).exists() or Path(move["src"]).exists():
+                        raise Conflict(f"changed since the run, nothing undone: {move['dst']} -> {move['src']}")
             if step["kind"] == "restore":
                 path = Path(step["path"])
                 if not path.exists() or _hash(path.read_text()) != step["wrote"]:
@@ -432,6 +466,11 @@ class Runner:
         for step in steps:
             if step["kind"] == "move":
                 shutil.move(step["src"], step["dst"])
+            elif step["kind"] == "journal":
+                journal = Path(step["path"])
+                for move in reversed(list(_moves(journal)) if journal.exists() else []):
+                    Path(move["src"]).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(move["dst"], move["src"])
             elif step["kind"] == "restore":
                 path = Path(step["path"])
                 if step["previous"] is None:
