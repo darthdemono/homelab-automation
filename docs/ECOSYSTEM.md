@@ -7,7 +7,7 @@ Status words: **available** means it ships in this repository and is tested; **p
 | Capability | How |
 | --- | --- |
 | Plan first, apply exactly the reviewed plan, undo | `plan`, `apply`, `undo`, `show`, `runs`; every run is a ledger record |
-| Safe primitives | actions `move`, `write`, `quarantine` (nothing is ever deleted), `exec`, and plugin-defined actions |
+| Safe primitives | actions `move`, `write`, `quarantine` (nothing is ever deleted), `exec`, `journal` (thousands of moves in one step, journalled as they happen, undone by replaying backwards) and plugin-defined actions |
 | Permissions | each plugin or script declares reads, writes, network and programs; the engine refuses anything else |
 | Find a task | `homelab scripts <words>`, with a `when` hint per script |
 | Hints for the model | a nudge (`when`, `before`, `after`, `avoid`) in `describe`, `plan` and `apply` |
