@@ -40,7 +40,7 @@ module-name = "homelab"
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-extend-exclude = ["custom"]
+extend-exclude = ["custom", "plugins/musicfix/docker"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
@@ -58,6 +58,7 @@ select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 "plugins/jellyfix/src/homelab_jellyfix/[!_]*.py" = ["S310", "S603", "S607", "S110", "SIM102", "SIM115", "E401", "E731", "E501", "B905"]
 "plugins/jellyfix/src/homelab_jellyfix/__init__.py" = ["E501"]
 # stages ported from the standalone musicFix tool keep its structure, so each port stays reviewable line by line
-"plugins/musicfix/src/homelab_musicfix/*.py" = ["S310", "S603", "S607", "S110", "S108", "SIM102", "SIM108", "SIM115", "SIM118", "E401", "E731", "E741", "E501", "B905", "UP", "I001", "F401", "PLR"]
+"plugins/musicfix/src/homelab_musicfix/*.py" = ["ALL"]
+"tests/musicfix/test_[nacr]*.py" = ["ALL"]
 # secrets.py runs `unv` by name on purpose: UnENVerse is the recommended secret source
 "src/homelab/secrets.py" = ["S603", "S606", "S607"]

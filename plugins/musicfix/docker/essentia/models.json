@@ -1,0 +1,31 @@
+{
+  "base_url": "https://essentia.upf.edu/models/",
+  "_comment": "Metadata-driven: for each classifier the container fetches the .json first, which declares its embedding model, graph input/output nodes and class labels. Only the path stems live here; version suffixes are probed (-1,-2,-3) so the zoo can bump versions without breaking us. A model that 404s across all versions is skipped with a warning, never fatal.",
+  "embeddings": [
+    {"key": "discogs-effnet", "path": "feature-extractors/discogs-effnet/discogs-effnet-bs64", "algo": "TensorflowPredictEffnetDiscogs", "output": "PartitionedCall:1"},
+    {"key": "msd-musicnn", "path": "feature-extractors/musicnn/msd-musicnn", "algo": "TensorflowPredictMusiCNN", "output": "model/dense/BiasAdd"}
+  ],
+  "classifiers": [
+    {"task": "genre_discogs400", "path": "classification-heads/genre_discogs400/genre_discogs400-discogs-effnet", "kind": "labels"},
+    {"task": "mtg_jamendo_genre", "path": "classification-heads/mtg_jamendo_genre/mtg_jamendo_genre-discogs-effnet", "kind": "labels"},
+    {"task": "mtg_jamendo_moodtheme", "path": "classification-heads/mtg_jamendo_moodtheme/mtg_jamendo_moodtheme-discogs-effnet", "kind": "labels"},
+    {"task": "mtg_jamendo_instrument", "path": "classification-heads/mtg_jamendo_instrument/mtg_jamendo_instrument-discogs-effnet", "kind": "labels"},
+    {"task": "mtg_jamendo_top50tags", "path": "classification-heads/mtg_jamendo_top50tags/mtg_jamendo_top50tags-discogs-effnet", "kind": "labels"},
+    {"task": "approachability", "path": "classification-heads/approachability/approachability_regression-discogs-effnet", "kind": "regression"},
+    {"task": "engagement", "path": "classification-heads/engagement/engagement_regression-discogs-effnet", "kind": "regression"},
+    {"task": "danceability", "path": "classification-heads/danceability/danceability-msd-musicnn", "kind": "binary", "positive": "danceable"},
+    {"task": "mood_happy", "path": "classification-heads/mood_happy/mood_happy-msd-musicnn", "kind": "binary", "positive": "happy"},
+    {"task": "mood_sad", "path": "classification-heads/mood_sad/mood_sad-msd-musicnn", "kind": "binary", "positive": "sad"},
+    {"task": "mood_aggressive", "path": "classification-heads/mood_aggressive/mood_aggressive-msd-musicnn", "kind": "binary", "positive": "aggressive"},
+    {"task": "mood_relaxed", "path": "classification-heads/mood_relaxed/mood_relaxed-msd-musicnn", "kind": "binary", "positive": "relaxed"},
+    {"task": "mood_party", "path": "classification-heads/mood_party/mood_party-msd-musicnn", "kind": "binary", "positive": "party"},
+    {"task": "mood_acoustic", "path": "classification-heads/mood_acoustic/mood_acoustic-msd-musicnn", "kind": "binary", "positive": "acoustic"},
+    {"task": "mood_electronic", "path": "classification-heads/mood_electronic/mood_electronic-msd-musicnn", "kind": "binary", "positive": "electronic"},
+    {"task": "voice_instrumental", "path": "classification-heads/voice_instrumental/voice_instrumental-msd-musicnn", "kind": "binary", "positive": "voice"},
+    {"task": "gender", "path": "classification-heads/gender/gender-msd-musicnn", "kind": "binary", "positive": "female"},
+    {"task": "tonal_atonal", "path": "classification-heads/tonal_atonal/tonal_atonal-msd-musicnn", "kind": "binary", "positive": "tonal"},
+    {"task": "deam", "path": "classification-heads/deam/deam-msd-musicnn", "kind": "valence_arousal"},
+    {"task": "emomusic", "path": "classification-heads/emomusic/emomusic-msd-musicnn", "kind": "valence_arousal"},
+    {"task": "muse", "path": "classification-heads/muse/muse-msd-musicnn", "kind": "valence_arousal"}
+  ]
+}
