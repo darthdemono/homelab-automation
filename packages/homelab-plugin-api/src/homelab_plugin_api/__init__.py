@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -215,10 +215,10 @@ def journal_action(ctx: Context, moves: list[tuple[str, str]], describe: str) ->
     """One action that carries many moves, written to a file under the plugin's state folder."""
     folder = ctx.path("state") / "journal-plans"
     folder.mkdir(parents=True, exist_ok=True)
-    target = folder / f"{uuid.uuid4().hex}.jsonl"
-    with target.open("w", encoding="utf-8") as handle:
-        for src, dst in moves:
-            handle.write(json.dumps({"src": src, "dst": dst}, ensure_ascii=False) + "\n")
+    text = "".join(json.dumps({"src": s, "dst": d}, ensure_ascii=False) + "\n" for s, d in moves)
+    # named after its content, so planning the same input twice gives the same plan
+    target = folder / f"{hashlib.sha256(text.encode()).hexdigest()[:20]}.jsonl"
+    target.write_text(text, encoding="utf-8")
     return Action(
         kind="journal", describe=f"{describe} ({len(moves)} moves)", args={"path": str(target), "count": len(moves)}
     )
