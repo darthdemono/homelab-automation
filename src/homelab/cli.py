@@ -381,7 +381,7 @@ class App:
         pol = self.config.core.policy
         rows = []
         for name, plugin in sorted(self.found.plugins.items()):
-            level, rule = self.config.level_for(f"{name}.{next(iter(plugin.jobs))}")
+            level, rule = self.config.level_for(f"{name}.{next(iter(plugin.jobs), 'run')}")
             rows.append({"name": name, "kind": plugin.manifest.category, "level": level, "rule": rule})
         data = {
             "default": pol.default,

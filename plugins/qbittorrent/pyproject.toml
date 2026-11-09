@@ -1,0 +1,23 @@
+[project]
+name = "homelab-plugin-qbittorrent"
+version = "0.1.0"
+description = "Add, relink, rename, clean and file qBittorrent torrents, with the previous state recorded so it can be undone."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Jubair Hasan (DarthDemono)" }]
+requires-python = ">=3.13"
+dependencies = ["homelab-plugin-api", "requests"]
+
+[tool.uv.sources]
+homelab-plugin-api = { workspace = true }
+
+[project.entry-points."homelab.plugins"]
+qbittorrent = "homelab_qbittorrent:PLUGIN"
+
+[tool.uv.build-backend]
+module-name = "homelab_qbittorrent"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.14.0"]
+build-backend = "uv_build"

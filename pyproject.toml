@@ -7,13 +7,16 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Jubair Hasan (DarthDemono)" }]
 requires-python = ">=3.13"
-dependencies = ["pydantic>=2.13", "pyyaml>=6", "homelab-plugin-api", "homelab-plugin-nextcloud", "homelab-plugin-jellyfix", "homelab-plugin-musicfix"]
+dependencies = ["pydantic>=2.13", "pyyaml>=6", "homelab-plugin-api", "homelab-plugin-nextcloud", "homelab-plugin-jellyfix", "homelab-plugin-musicfix", "homelab-plugin-arr", "homelab-plugin-qbittorrent", "homelab-plugin-jellyfin"]
 
 [tool.uv.sources]
 homelab-plugin-api = { workspace = true }
 homelab-plugin-nextcloud = { workspace = true }
 homelab-plugin-jellyfix = { workspace = true }
 homelab-plugin-musicfix = { workspace = true }
+homelab-plugin-jellyfin = { workspace = true }
+homelab-plugin-qbittorrent = { workspace = true }
+homelab-plugin-arr = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*", "plugins/*"]
