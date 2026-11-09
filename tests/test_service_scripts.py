@@ -96,7 +96,7 @@ def svc(env, monkeypatch):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(ROOT / "scripts"),
+                "scripts_dir": str(ROOT / "src" / "homelab" / "scripts"),
                 "paths": {"lib": str(tmp / "lib")},
             }
         )

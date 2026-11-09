@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def build() -> str:
-    found = discover(ROOT / "no-private-plugins", [ROOT / "scripts"])
+    found = discover(ROOT / "no-private-plugins", [ROOT / "src" / "homelab" / "scripts"])
     declared: dict[str, list[str]] = {}
     for name, plugin in sorted(found.plugins.items()):
         for secret in plugin.manifest.secrets:

@@ -38,7 +38,7 @@ def dk(env, monkeypatch):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(ROOT / "scripts"),
+                "scripts_dir": str(ROOT / "src" / "homelab" / "scripts"),
                 "paths": {"lib": str(tmp / "lib")},
             }
         )
@@ -82,7 +82,7 @@ def test_docker_ps_without_docker_says_so(env, monkeypatch, capsys):
             {
                 "state_dir": str(tmp / "state"),
                 "custom_dir": str(tmp / "custom"),
-                "scripts_dir": str(ROOT / "scripts"),
+                "scripts_dir": str(ROOT / "src" / "homelab" / "scripts"),
                 "paths": {"lib": str(tmp / "lib")},
             }
         )

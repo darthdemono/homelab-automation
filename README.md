@@ -90,14 +90,14 @@ flowchart LR
         CLI["homelab CLI<br/>describe, scripts, plan, apply, undo<br/>--json, typed exit codes"]
         subgraph ENG["Engine"]
             CFG["3 YAML files<br/>homelab, plugins, jobs"]
-            REG["Registry<br/>entry points, scripts/, custom/"]
+            REG["Registry<br/>entry points, bundled scripts, custom/"]
             RUN["Runner<br/>plan, re-check, apply, undo"]
             SEC["Secrets<br/>placeholders, scrubbing"]
             SCH["Scheduler<br/>systemd user timers"]
         end
         subgraph EXT["Plugins and scripts"]
             BP["Bundled plugins<br/>general tools"]
-            BS["scripts/<br/>bundled one-offs"]
+            BS["bundled scripts<br/>one-offs in the package"]
             PP["custom/<br/>private plugins and scripts<br/>gitignored"]
         end
         ST[("state/<br/>ledger, quarantine,<br/>audit log, journals<br/>gitignored")]

@@ -48,7 +48,7 @@ class Core(BaseModel):
     secrets: Secrets = Secrets()
     state_dir: str = "state"
     custom_dir: str = "custom"
-    scripts_dir: str = "scripts"
+    scripts_dir: str = str(Path(__file__).parent / "scripts")  # inside the package, so a pip install has them
     paths: dict[str, str] = {}
     schedule_wrapper: list[str] = []
     policy: Policy = Policy()
