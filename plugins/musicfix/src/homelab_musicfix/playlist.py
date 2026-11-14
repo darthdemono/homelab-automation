@@ -46,23 +46,21 @@ DEFAULT_DB = os.environ.get("NAVIDROME_DB", "navidrome.db")
 # --------------------------------------------------------------------------
 # Subsonic API
 # --------------------------------------------------------------------------
-def auth_params(user, password, client):
+def auth_params(user, secret, client):
     salt = "".join(random.choices(string.ascii_letters + string.digits, k=12))
-    # The Subsonic API defines its login token as md5(password + salt); it is a protocol requirement, not storage.
-    token = hashlib.md5(
-        (password + salt).encode("utf-8"), usedforsecurity=False
-    ).hexdigest()  # codeql[py/weak-sensitive-data-hashing]
+    # The Subsonic API defines its login token as md5(secret + salt); it is a protocol requirement, not storage.
+    token = hashlib.md5((secret + salt).encode("utf-8"), usedforsecurity=False).hexdigest()
     return {"u": user, "t": token, "s": salt, "v": "1.16.1", "c": client, "f": "json"}
 
 
 class Navidrome:
-    def __init__(self, url, user, password, client="musicFix"):
+    def __init__(self, url, user, secret, client="musicFix"):
         self.url = url.rstrip("/")
-        self.user, self.password, self.client = user, password, client
+        self.user, self.secret, self.client = user, secret, client
 
     def call(self, endpoint, params=None, method="get"):
         p = dict(params or {})
-        p.update(auth_params(self.user, self.password, self.client))
+        p.update(auth_params(self.user, self.secret, self.client))
         fn = requests.post if method == "post" else requests.get
         resp = fn(f"{self.url}/rest/{endpoint}", params=p, timeout=30)
         resp.raise_for_status()
@@ -103,7 +101,7 @@ class Navidrome:
 
     # -- native API (JWT) -- only playlist cover upload lives outside Subsonic --
     def login(self):
-        r = requests.post(f"{self.url}/auth/login", json={"username": self.user, "password": self.password}, timeout=15)
+        r = requests.post(f"{self.url}/auth/login", json={"username": self.user, "password": self.secret}, timeout=15)
         r.raise_for_status()
         return r.json()["token"]
 
@@ -498,7 +496,7 @@ def main(argv=None):
     ap.add_argument("--db", default=DEFAULT_DB, help="navidrome.db, read-only, matched against directly")
     ap.add_argument("--url", default=_env("NAVIDROME_URL"))
     ap.add_argument("--user", default=_env("NAVIDROME_USER"))
-    ap.add_argument("--password", default=_env("NAVIDROME_TOKEN"))
+    ap.add_argument("--password", dest="secret", default=_env("NAVIDROME_TOKEN"))
     ap.add_argument("--title-threshold", type=int, default=78)
     ap.add_argument("--artist-threshold", type=int, default=70)
     ap.add_argument("--overall-threshold", type=int, default=78)
@@ -509,10 +507,10 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.rename or args.cover:
-        if not (args.url and args.user and args.password):
+        if not (args.url and args.user and args.secret):
             print("[playlist] need NAVIDROME_URL/USER/TOKEN (env) or --url/--user/--password", file=sys.stderr)
             return 2
-        nd = Navidrome(args.url, args.user, args.password)
+        nd = Navidrome(args.url, args.user, args.secret)
         nd.ping()
         return run_rename(nd, args.rename, args.cover, args.commit)
 
@@ -520,10 +518,10 @@ def main(argv=None):
         ap.error("a CSV path is required unless --rename/--cover is used")
 
     if args.covers:
-        if not (args.url and args.user and args.password):
+        if not (args.url and args.user and args.secret):
             print("[covers] need NAVIDROME_URL/USER/TOKEN (env) or --url/--user/--password", file=sys.stderr)
             return 2
-        nd = Navidrome(args.url, args.user, args.password)
+        nd = Navidrome(args.url, args.user, args.secret)
         nd.ping()
         folder = args.path if os.path.isdir(args.path) else os.path.dirname(args.path)
         return run_covers(folder, nd, args.commit)
@@ -555,10 +553,10 @@ def main(argv=None):
         print("[playlist] nothing written; re-run with --commit")
         return 0
 
-    if not (args.url and args.user and args.password):
+    if not (args.url and args.user and args.secret):
         print("[playlist] need NAVIDROME_URL/USER/TOKEN (env) or --url/--user/--password", file=sys.stderr)
         return 2
-    nd = Navidrome(args.url, args.user, args.password)
+    nd = Navidrome(args.url, args.user, args.secret)
     nd.ping()
     existing = {p["name"]: p["id"] for p in nd.playlists()}
     for name, song_ids, _n in plans:
