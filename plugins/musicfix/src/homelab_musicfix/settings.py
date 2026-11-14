@@ -8,7 +8,8 @@ from pathlib import Path
 
 MUSIC_ROOT = Path("/music")
 TMP_ROOT = Path("/music-tmp")
-REPORTS = Path("reports")  # where inventory and caches live; becomes <state>/plugins/musicfix
+REPORTS = Path("reports")  # where inventory and caches live; becomes the plugin state folder
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent  # the plugin folder, which holds docker/
 
 
 def configure(music, tmp, reports) -> None:

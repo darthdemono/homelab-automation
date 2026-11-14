@@ -112,9 +112,18 @@ class TVDB:
         return _cached(("tvdb", "eps", series_id, order), go, ttl=86400 * 7)
 
     def series(self, series_id):
-        return _cached(
-            ("tvdb", "series", series_id), lambda: self._auth_get(f"/series/{series_id}")["data"], ttl=86400 * 30
-        )
+        def go():
+            info = self._auth_get(f"/series/{series_id}")["data"]
+            # /series/{id} carries only the native name; the English one lives in the translations endpoint.
+            try:
+                name = (self._auth_get(f"/series/{series_id}/translations/eng").get("data") or {}).get("name")
+            except Exception:
+                name = None
+            if name:
+                info["translations"] = {**(info.get("translations") or {}), "eng": name}
+            return info
+
+        return _cached(("tvdb", "series2", series_id), go, ttl=86400 * 30)
 
 
 # ------------------------------------------------------------------ TMDB

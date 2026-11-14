@@ -278,31 +278,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-# --- engine job -------------------------------------------------------------------------------------------------
-from homelab_plugin_api import Job, Plan  # noqa: E402
-
-
-def plan_scan(ctx, options) -> Plan:
-    """Walk the library and write the inventory every other stage reads. Changes no music file."""
-    from . import settings
-
-    settings.prepare(ctx, options)
-    out = settings.REPORTS / "inventory.jsonl"
-    code = main(
-        [
-            "--root",
-            str(settings.MUSIC_ROOT),
-            "--out",
-            str(out),
-            "--others-out",
-            str(settings.REPORTS / "non_audio.jsonl"),
-        ]
-        + (["--limit", str(options.limit)] if options.limit else [])
-    )
-    rows = sum(1 for _ in open(out, encoding="utf-8")) if out.exists() else 0
-    return Plan(notes=[f"scan exit {code}: {rows} audio files in the inventory at {out}"])
-
-
-JOBS = {"scan": Job("Inventory the library (read only for music; writes the inventory cache)", plan_scan)}

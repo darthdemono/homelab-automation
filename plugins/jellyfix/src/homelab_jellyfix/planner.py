@@ -71,6 +71,7 @@ def english_title(cand):
     name = cand.get("name") or ""
     if re.search(r"[^\x00-\x7f]", name):
         for a in cand.get("aliases") or []:
+            a = a.get("name") if isinstance(a, dict) else a  # TVDB returns alias objects as well as strings
             if a and not re.search(r"[^\x00-\x7f]", a):
                 name = a
                 break
@@ -147,7 +148,12 @@ def _identify_series(entry, path, tvdb, issues, prefer_jp=False, n_files=0):
     if m:
         sid = int(m.group(1))
         info = tvdb.series(sid)
-        return sid, english_title(info), (info.get("firstAired") or "")[:4] or None
+        title = english_title(info)
+        # A folder that already carries the id keeps its own spelling when only the case differs (BLEACH, not Bleach).
+        base = re.sub(r"\s*(?:\((?:19|20)\d{2}\))?\s*\[tvdbid-\d+\].*$", "", entry).strip()
+        if base and base != title and base.lower() == title.lower():
+            title = base
+        return sid, title, (info.get("firstAired") or "")[:4] or None
 
     p = parse(entry, is_dir=True)
     guess = p["title"] or entry
