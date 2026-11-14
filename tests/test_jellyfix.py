@@ -93,3 +93,65 @@ def test_prune_quarantines_metadata_only_folders(lib, capsys):
     assert not gone.exists()
     assert run(cfg, "undo", "latest", "--yes") == 0
     assert (gone / "tvshow.nfo").exists()
+
+
+# ---- the fixed naming convention and the TVDB fixes of 13-11-2026
+def test_episode_name_has_one_numbering_and_no_title():
+    from homelab_jellyfix import naming
+
+    info = {"width": 1920, "height": 1080, "bit_depth": 8, "vcodec": "h264", "acodec": "eac3", "channels": 6}
+    name = naming.episode_name("Show", 2020, 1, 5, "A Long Title", info, source="WEBDL", group="GRP", absolute=415)
+    assert name.startswith("Show (2020) - S01E05") and "415" not in name and "A Long Title" not in name
+    assert naming.episode_name("Show", 2020, 5, 25, "x", info, episode_end=38).startswith("Show (2020) - S05E25-E38")
+
+
+def test_english_title_accepts_alias_objects_and_strings():
+    from homelab_jellyfix import planner
+
+    native = "ブラッククローバー"
+    assert (
+        planner.english_title(
+            {
+                "name": native,
+                "aliases": [{"language": "jpn", "name": native}, {"language": "eng", "name": "Black Clover"}],
+            }
+        )
+        == "Black Clover"
+    )
+    assert planner.english_title({"name": native, "aliases": [native, "Black Clover"]}) == "Black Clover"
+    assert planner.english_title({"name": "Plain", "aliases": [{"name": "Other"}]}) == "Plain"
+
+
+def test_a_folder_that_already_carries_its_id_keeps_its_own_case(monkeypatch):
+    from homelab_jellyfix import planner
+
+    class Tvdb:
+        def series(self, sid):
+            return {"name": "Bleach", "firstAired": "2004-10-05"}
+
+    sid, title, year = planner._identify_series(
+        "BLEACH (2004) [tvdbid-74796]", "/x/BLEACH (2004) [tvdbid-74796]", Tvdb(), []
+    )
+    assert (sid, title, year) == (74796, "BLEACH", "2004")  # only the case differs, so the folder's spelling wins
+    sid, title, _ = planner._identify_series("Other (2004) [tvdbid-74796]", "/x", Tvdb(), [])
+    assert title == "Bleach"  # a different word is not overridden
+
+
+def test_tvdb_series_adds_the_english_translation(monkeypatch):
+    from homelab_jellyfix import providers
+
+    calls = []
+
+    def fake_auth_get(self, path):
+        calls.append(path)
+        if path.endswith("/translations/eng"):
+            return {"data": {"name": "Black Clover"}}
+        return {"data": {"name": "ブラッククローバー"}}
+
+    monkeypatch.setattr(providers.TVDB, "_auth_get", fake_auth_get)
+    monkeypatch.setattr(providers, "_cached", lambda key, go, ttl=0: go())
+    info = providers.TVDB({"TVDB_API_KEY": "k"}).series(331753)
+    assert info["translations"]["eng"] == "Black Clover" and calls == [
+        "/series/331753",
+        "/series/331753/translations/eng",
+    ]

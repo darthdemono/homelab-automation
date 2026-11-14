@@ -134,10 +134,9 @@ def episode_name(
     ep = f"S{season:02d}E{episode:02d}"
     if episode_end and episode_end != episode:
         ep += f"-E{episode_end:02d}"
+    # Fixed convention (Agents/Media-Naming.md): one numbering (SxxEyy), no absolute number, no episode title.
+    # `ep_title` and `absolute` stay in the signature for callers but never reach the name.
     bits = [show, ep]
-    if absolute is not None:
-        bits.append(f"{absolute:03d}")
-    bits.append(sanitize(ep_title) or f"Episode {episode}")
     tail = media_tail(info, source, group)
     name = " - ".join(bits) + (f" {tail}" if tail else "")
     return _cap(name) + ext
